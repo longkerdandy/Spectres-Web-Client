@@ -1,0 +1,120 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1040 710" font-family="ui-sans-serif, system-ui, sans-serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#475569"/>
+    </marker>
+    <style>
+      .layer { fill: #f1f5f9; stroke: #94a3b8; stroke-width: 1.3; }
+      .layer-app { fill: #ecfdf5; stroke: #059669; stroke-width: 1.5; }
+      .layer-sdk { fill: #eff6ff; stroke: #3b82f6; stroke-width: 1.3; }
+      .sub { fill: #ffffff; stroke: #94a3b8; stroke-width: 1; }
+      .side { fill: #fefce8; stroke: #ca8a04; stroke-width: 1.2; }
+      .ext { fill: #faf5ff; stroke: #9333ea; stroke-width: 1.3; }
+      .user { fill: #ffffff; stroke: #0f172a; stroke-width: 1.5; }
+      .layer-title { font-size: 13px; font-weight: 700; fill: #0f172a; }
+      .title { font-size: 11.5px; font-weight: 700; fill: #0f172a; }
+      .text { font-size: 10.5px; fill: #334155; }
+      .flow { font-size: 9.5px; fill: #475569; font-style: italic; }
+      .note { font-size: 11px; fill: #64748b; }
+      .edge { stroke: #475569; stroke-width: 1.4; fill: none; marker-end: url(#arrow); }
+      .edge-dashed { stroke: #a16207; stroke-width: 1.1; fill: none; stroke-dasharray: 4 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <!-- User -->
+  <rect class="user" x="425" y="20" width="150" height="40" rx="8"/>
+  <text class="layer-title" x="481" y="45">User</text>
+  <path class="edge" d="M 500 60 L 500 120"/>
+
+  <!-- ===================== Layer 6: App code ===================== -->
+  <rect class="layer-app" x="250" y="120" width="500" height="112" rx="8"/>
+  <text class="layer-title" x="262" y="143">App Code (this repo)</text>
+  <rect class="sub" x="262" y="156" width="152" height="62" rx="5"/>
+  <text class="title" x="272" y="176">App shell</text>
+  <text class="text" x="272" y="192">layout · branding</text>
+  <text class="text" x="272" y="206">New conversation</text>
+  <rect class="sub" x="426" y="156" width="152" height="62" rx="5"/>
+  <text class="title" x="436" y="176">ChatPage</text>
+  <text class="text" x="436" y="192">the only page</text>
+  <text class="text" x="436" y="206">chat + tool cards</text>
+  <rect class="sub" x="590" y="156" width="152" height="62" rx="5"/>
+  <text class="title" x="600" y="176">thread.ts</text>
+  <text class="text" x="600" y="192">thread_id helpers</text>
+  <text class="text" x="600" y="206">read / reset</text>
+
+  <!-- ===================== Layer 5: CopilotKit SDK ===================== -->
+  <rect class="layer-sdk" x="250" y="248" width="500" height="112" rx="8"/>
+  <text class="layer-title" x="262" y="271">CopilotKit React SDK (MIT · direct AG-UI · no cloud)</text>
+  <rect class="sub" x="262" y="284" width="152" height="62" rx="5"/>
+  <text class="title" x="272" y="304">provider</text>
+  <text class="text" x="272" y="320">useAgent</text>
+  <text class="text" x="272" y="334">agent state → React</text>
+  <rect class="sub" x="426" y="284" width="152" height="62" rx="5"/>
+  <text class="title" x="436" y="304">prebuilt chat</text>
+  <text class="text" x="436" y="320">message list · input</text>
+  <text class="text" x="436" y="334">streaming render</text>
+  <rect class="sub" x="590" y="284" width="152" height="62" rx="5"/>
+  <text class="title" x="600" y="304">tool renderer</text>
+  <text class="text" x="600" y="320">tool-call cards</text>
+  <text class="text" x="600" y="334">running / done</text>
+
+  <!-- ===================== Layer 4: AG-UI client ===================== -->
+  <rect class="layer" x="250" y="376" width="500" height="56" rx="8"/>
+  <text class="layer-title" x="262" y="398">@ag-ui/client · HttpAgent — separate MIT package (ag-ui-protocol org)</text>
+  <text class="text" x="262" y="418">AG-UI protocol client — RunAgentInput in · SSE event stream out · pulled in as a CopilotKit SDK dependency</text>
+
+  <!-- ===================== Layer 3: React ===================== -->
+  <rect class="layer" x="250" y="448" width="500" height="56" rx="8"/>
+  <text class="layer-title" x="262" y="470">React 19</text>
+  <text class="text" x="262" y="490">UI framework — bundled by Vite</text>
+
+  <!-- ===================== Layer 2: Browser ===================== -->
+  <rect class="layer" x="250" y="520" width="500" height="56" rx="8"/>
+  <text class="layer-title" x="262" y="542">Browser runtime</text>
+  <text class="text" x="262" y="562">loads index.html · executes bundle · DOM / fetch / SSE</text>
+
+  <!-- ===================== Layer 1: HTTP server ===================== -->
+  <rect class="layer" x="250" y="592" width="500" height="56" rx="8"/>
+  <text class="layer-title" x="262" y="614">HTTP Server</text>
+  <text class="text" x="262" y="634">dev: Vite dev server (Node.js) · prod: any static file server — serves dist/ · Node is build-time only</text>
+
+  <!-- builds-on arrow -->
+  <path class="edge" d="M 234 630 L 234 150"/>
+  <text class="note" x="222" y="390" transform="rotate(-90 222 390)">each layer builds on the one below</text>
+
+  <!-- ===================== Cross-cutting (left) ===================== -->
+  <rect class="side" x="30" y="120" width="180" height="64" rx="6"/>
+  <text class="title" x="42" y="142">localStorage</text>
+  <text class="text" x="42" y="158">thread_id persistence</text>
+  <text class="text" x="42" y="172">(survives reload)</text>
+  <path class="edge-dashed" d="M 210 152 L 262 176"/>
+
+  <rect class="side" x="30" y="248" width="180" height="64" rx="6"/>
+  <text class="title" x="42" y="270">Tailwind CSS</text>
+  <text class="text" x="42" y="286">styles App shell &amp;</text>
+  <text class="text" x="42" y="300">SDK components</text>
+  <path class="edge-dashed" d="M 210 280 L 250 300"/>
+
+  <rect class="side" x="30" y="376" width="180" height="64" rx="6"/>
+  <text class="title" x="42" y="398">import.meta.env</text>
+  <text class="text" x="42" y="414">VITE_AGENT_ENDPOINT</text>
+  <text class="text" x="42" y="428">default :7777/agui</text>
+  <path class="edge-dashed" d="M 210 408 L 250 408"/>
+
+  <!-- ===================== External system (right) ===================== -->
+  <rect class="ext" x="850" y="360" width="160" height="132" rx="8"/>
+  <text class="layer-title" x="862" y="384">Spectres Runtime</text>
+  <text class="text" x="862" y="402">same PC · :7777</text>
+  <text class="text" x="862" y="420">AGUI router</text>
+  <text class="text" x="862" y="436">Team Leader Agent</text>
+  <text class="text" x="862" y="452">PostgreSQL sessions</text>
+  <text class="text" x="862" y="468">CORS allowlist</text>
+
+  <path class="edge" d="M 750 392 L 850 392"/>
+  <text class="flow" x="754" y="384">RunAgentInput</text>
+  <path class="edge" d="M 850 420 L 750 420"/>
+  <text class="flow" x="760" y="440">SSE events</text>
+
+  <!-- Footnote -->
+  <text class="note" x="250" y="690">Bottom-up stack. Cross-cutting concerns on the left (dashed); the only external system is the Runtime, reached over HTTP/SSE from the AG-UI client layer.</text>
+</svg>
