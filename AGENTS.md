@@ -53,9 +53,9 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
-### 3.2 Current Milestone (v0.1.0 — MVP)
+### 3.2 Current Milestone (v0.1.0 — MVP, completed)
 
-One page, one chat: streaming over AG-UI, built-in generic tool-call renderer, `thread_id` persisted in `localStorage` with a "New conversation" button. See [`docs/plan/v0.1.0-mvp-chat-client.md`](docs/plan/v0.1.0-mvp-chat-client.md).
+One page, one chat: streaming over AG-UI, built-in generic tool-call renderer, `thread_id` persisted in `localStorage` with a "New conversation" button. Completed per [`docs/plan/v0.1.0-mvp-chat-client.md`](docs/plan/v0.1.0-mvp-chat-client.md).
 
 ### 3.3 Explicitly Out of Scope
 

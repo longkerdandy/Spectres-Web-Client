@@ -56,22 +56,23 @@ snapshots, run lifecycle). It is the app's *only* network dependency and
 the only place the Runtime is reachable.
 
 Note: `@ag-ui/client` is a **separate MIT package** maintained by the
-`ag-ui-protocol` organization — not part of the CopilotKit SDK. It enters
-the dependency tree as a dependency of `@copilotkit/react-core`; v0.1.0
-does not install or import it directly (the SDK wraps it), but it is shown
-as its own layer because it is the protocol implementation and an
-independently versioned package.
+`ag-ui-protocol` organization — not part of the CopilotKit SDK. It is the
+protocol implementation and an independently versioned package. The app
+imports it directly in `agent.ts` to construct the `HttpAgent` that the
+CopilotKit provider self-manages (direct connection, no runtime).
 
 ### 2.5 CopilotKit React SDK (MIT)
 
 Sits on React and the AG-UI client. Three pieces used in v0.1.0:
 
-- **provider / `useAgent`**: owns the agent connection and exposes agent
-  state as React state. Direct AG-UI connection — no CopilotKit Runtime, no
-  CopilotKit Cloud, no API keys.
-- **prebuilt chat component**: message list, streaming rendering, input.
-- **built-in generic tool-call renderer**: tool calls appear as cards with
-  running/done states.
+- **provider / `CopilotKit`** (from `@copilotkit/react-core/v2`): owns the
+  agent connection and exposes agent state as React state. The agent
+  instance is passed via `selfManagedAgents` — a direct AG-UI connection
+  with no CopilotKit Runtime, no CopilotKit Cloud, no API keys.
+- **prebuilt chat component** (`CopilotChat` from the same v2 surface):
+  message list, streaming rendering, input.
+- **built-in generic tool-call renderer** (`useDefaultRenderTool`): tool
+  calls appear as cards with running/done states.
 
 Styling note: current CopilotKit components are themselves styled with
 Tailwind utilities (the SDK depends on `tailwind-merge` /
@@ -117,7 +118,7 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 5. Planned Source Layout (v0.1.0)
+## 5. Source Layout (v0.1.0)
 
 ```text
 src/
