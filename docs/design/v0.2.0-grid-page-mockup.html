@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>Spectres — ETF 网格（布局示意图）</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>body{font-family:ui-sans-serif,system-ui,"PingFang SC","Microsoft YaHei",sans-serif}</style>
+</head>
+<body class="bg-slate-100 text-slate-800">
+
+<!-- ===== 应用外壳：顶栏 ===== -->
+<header class="h-12 bg-white border-b flex items-center px-4 gap-6 sticky top-0 z-10">
+  <span class="font-semibold tracking-wide">Spectres</span>
+  <nav class="flex gap-1 text-sm">
+    <a class="px-3 py-1.5 rounded-md text-slate-500 hover:bg-slate-100">对话</a>
+    <a class="px-3 py-1.5 rounded-md bg-slate-900 text-white">ETF 网格</a>
+  </nav>
+  <div class="ml-auto flex items-center gap-3">
+    <span class="text-xs text-slate-400">数据截至 2026-09-26 收盘</span>
+    <button class="text-sm px-3 py-1.5 rounded-md border hover:bg-slate-50">重新计算信号</button>
+    <button class="text-sm px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-700">刷新行情数据</button>
+  </div>
+</header>
+
+<main class="max-w-6xl mx-auto px-4 py-5 space-y-5">
+
+  <!-- ===== 同步结果提示（部分失败示例）===== -->
+  <div class="rounded-lg border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm flex items-start gap-2">
+    <span>⚠️</span>
+    <div>
+      <span class="font-medium">行情同步完成（部分失败）：</span>
+      K 线 3 标的 +18 行 · 估值 +1 行 · 信号重算 3 条
+      <span class="text-amber-700">｜FTShare 限流，513530 使用 09-25 缓存数据</span>
+    </div>
+  </div>
+
+  <!-- ===== 区块一：网格状态总览 ===== -->
+  <section class="bg-white rounded-xl border shadow-sm">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <h2 class="font-medium">网格状态</h2>
+      <span class="text-xs text-slate-400">锚点：MA60 ｜ 步长：5%（对数）</span>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-400 border-b">
+          <th class="px-4 py-2 font-normal">标的</th>
+          <th class="px-2 py-2 font-normal text-right">持仓</th>
+          <th class="px-2 py-2 font-normal text-right">成本均价</th>
+          <th class="px-2 py-2 font-normal text-right">最新收盘</th>
+          <th class="px-2 py-2 font-normal text-right">市值</th>
+          <th class="px-2 py-2 font-normal text-right">已实现盈亏</th>
+          <th class="px-2 py-2 font-normal text-center">档位</th>
+          <th class="px-2 py-2 font-normal">今日信号（买 / 卖挂单）</th>
+          <th class="px-4 py-2 font-normal text-center">估值门</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        <tr>
+          <td class="px-4 py-3"><div class="font-medium">恒生科技 ETF</div><div class="text-xs text-slate-400">513330.XSHG</div></td>
+          <td class="px-2 py-3 text-right">14,000</td>
+          <td class="px-2 py-3 text-right">0.8120</td>
+          <td class="px-2 py-3 text-right">0.8450<br><span class="text-xs text-slate-400">09-26</span></td>
+          <td class="px-2 py-3 text-right">11,830.00</td>
+          <td class="px-2 py-3 text-right text-emerald-600">+326.40</td>
+          <td class="px-2 py-3 text-center"><span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-xs">+1 档</span></td>
+          <td class="px-2 py-3">
+            <div class="space-y-1 text-xs whitespace-nowrap">
+              <div class="flex items-center gap-1">
+                <span class="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">买 ≤ 0.8030 × 2 格</span>
+                <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700">触发</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="inline-block px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">卖 ≥ 0.8530 × 1 格</span>
+                <span class="px-1.5 py-0.5 rounded bg-violet-100 text-violet-700">挂单·成本保护</span>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-center"><span class="text-xs text-slate-300">—</span></td>
+        </tr>
+        <tr>
+          <td class="px-4 py-3"><div class="font-medium">港股创新药 ETF</div><div class="text-xs text-slate-400">513120.XSHG</div></td>
+          <td class="px-2 py-3 text-right">8,000</td>
+          <td class="px-2 py-3 text-right">1.1530</td>
+          <td class="px-2 py-3 text-right">1.1890<br><span class="text-xs text-slate-400">09-26</span></td>
+          <td class="px-2 py-3 text-right">9,512.00</td>
+          <td class="px-2 py-3 text-right text-rose-600">-58.20</td>
+          <td class="px-2 py-3 text-center"><span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-xs">0 档</span></td>
+          <td class="px-2 py-3">
+            <div class="space-y-1 text-xs whitespace-nowrap">
+              <div class="flex items-center gap-1">
+                <span class="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">买 ≤ 1.1240 × 1 格</span>
+                <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">挂单</span>
+              </div>
+              <div class="flex items-center gap-1">
+                <span class="inline-block px-2 py-0.5 rounded bg-rose-50 text-rose-700 border border-rose-200">卖 ≥ 1.2106 × 1 格</span>
+                <span class="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500">挂单</span>
+              </div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-center"><span class="text-xs text-slate-300">—</span></td>
+        </tr>
+        <tr>
+          <td class="px-4 py-3"><div class="font-medium">红利低波 ETF</div><div class="text-xs text-slate-400">513530.XSHG</div></td>
+          <td class="px-2 py-3 text-right">0</td>
+          <td class="px-2 py-3 text-right text-slate-300">—</td>
+          <td class="px-2 py-3 text-right">1.4210<br><span class="text-xs text-slate-400">09-25 ⚠</span></td>
+          <td class="px-2 py-3 text-right text-slate-300">—</td>
+          <td class="px-2 py-3 text-right text-emerald-600">+1,204.75</td>
+          <td class="px-2 py-3 text-center"><span class="inline-block px-2 py-0.5 rounded bg-slate-100 text-xs">-2 档</span></td>
+          <td class="px-2 py-3">
+            <div class="space-y-1 text-xs whitespace-nowrap">
+              <div class="flex items-center gap-1">
+                <span class="inline-block px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200">买 ≤ 1.3530 × 1 格</span>
+                <span class="px-1.5 py-0.5 rounded bg-rose-100 text-rose-700">挂单·门关闭</span>
+              </div>
+              <div class="text-slate-400">卖 —（无持仓）</div>
+              <div class="text-rose-600">gate_closed：股息率分位 12% &lt; 20%</div>
+            </div>
+          </td>
+          <td class="px-4 py-3 text-center">
+            <span class="inline-block px-2 py-0.5 rounded bg-rose-100 text-rose-700 text-xs" title="930914 股息率分位 12% &lt; 20%，禁止开新买格">关闭 · 分位 12%</span>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ===== 区块二：成交流水 ===== -->
+  <section class="bg-white rounded-xl border shadow-sm">
+    <div class="px-4 py-3 border-b flex items-center justify-between flex-wrap gap-2">
+      <h2 class="font-medium">成交流水</h2>
+      <div class="flex items-center gap-2 text-xs">
+        <select class="border rounded px-2 py-1.5"><option>全部标的</option><option>513330</option><option>513120</option><option>513530</option></select>
+        <input type="date" class="border rounded px-2 py-1.5 text-slate-500" value="2026-09-01">
+        <span class="text-slate-300">~</span>
+        <input type="date" class="border rounded px-2 py-1.5 text-slate-500" value="2026-09-26">
+        <button class="px-2.5 py-1.5 rounded border hover:bg-slate-50">查询</button>
+        <button id="open-record" class="px-3 py-1.5 rounded-md bg-slate-900 text-white hover:bg-slate-700">＋ 记一笔成交</button>
+      </div>
+    </div>
+    <table class="w-full text-sm">
+      <thead>
+        <tr class="text-left text-xs text-slate-400 border-b">
+          <th class="px-4 py-2 font-normal">日期</th>
+          <th class="px-2 py-2 font-normal">标的</th>
+          <th class="px-2 py-2 font-normal">方向</th>
+          <th class="px-2 py-2 font-normal text-right">价格</th>
+          <th class="px-2 py-2 font-normal text-right">数量</th>
+          <th class="px-2 py-2 font-normal text-right">成交金额</th>
+          <th class="px-2 py-2 font-normal text-right">佣金</th>
+          <th class="px-2 py-2 font-normal text-right">净额</th>
+          <th class="px-2 py-2 font-normal text-center">来源</th>
+          <th class="px-4 py-2 font-normal">备注</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y text-slate-600">
+        <tr>
+          <td class="px-4 py-2.5">09-24</td><td class="px-2 py-2.5">513330</td>
+          <td class="px-2 py-2.5"><span class="px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 text-xs">买</span></td>
+          <td class="px-2 py-2.5 text-right">0.8030</td><td class="px-2 py-2.5 text-right">2,800</td>
+          <td class="px-2 py-2.5 text-right">2,248.40</td><td class="px-2 py-2.5 text-right">0.45</td>
+          <td class="px-2 py-2.5 text-right">-2,248.85</td>
+          <td class="px-2 py-2.5 text-center text-xs text-slate-400">manual</td>
+          <td class="px-4 py-2.5 text-xs text-slate-400">按计划买 2 格</td>
+        </tr>
+        <tr>
+          <td class="px-4 py-2.5">09-18</td><td class="px-2 py-2.5">513120</td>
+          <td class="px-2 py-2.5"><span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 text-xs">卖</span></td>
+          <td class="px-2 py-2.5 text-right">1.2106</td><td class="px-2 py-2.5 text-right">1,600</td>
+          <td class="px-2 py-2.5 text-right">1,936.96</td><td class="px-2 py-2.5 text-right">0.39</td>
+          <td class="px-2 py-2.5 text-right">+1,936.57</td>
+          <td class="px-2 py-2.5 text-center text-xs text-slate-400">manual</td>
+          <td class="px-4 py-2.5 text-xs text-slate-400">—</td>
+        </tr>
+        <tr>
+          <td class="px-4 py-2.5">09-12</td><td class="px-2 py-2.5">513530</td>
+          <td class="px-2 py-2.5"><span class="px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 text-xs">卖</span></td>
+          <td class="px-2 py-2.5 text-right">1.4500</td><td class="px-2 py-2.5 text-right">4,000</td>
+          <td class="px-2 py-2.5 text-right">5,800.00</td><td class="px-2 py-2.5 text-right">1.16</td>
+          <td class="px-2 py-2.5 text-right">+5,798.84</td>
+          <td class="px-2 py-2.5 text-center text-xs text-slate-400">manual</td>
+          <td class="px-4 py-2.5 text-xs text-slate-400">清仓，等估值门重开</td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="px-4 py-2 text-xs text-slate-400 border-t">共 23 条 · 最新在前</div>
+  </section>
+</main>
+
+<!-- ===== 记账弹窗（默认隐藏，点「＋ 记一笔成交」打开）===== -->
+<div id="record-modal" class="hidden fixed inset-0 z-20 flex items-center justify-center p-4">
+  <div class="absolute inset-0 bg-slate-900/40"></div>
+  <div class="relative bg-white rounded-xl shadow-xl w-full max-w-md">
+    <div class="px-4 py-3 border-b flex items-center justify-between">
+      <h2 class="font-medium">记一笔成交</h2>
+      <button id="close-record" class="text-slate-400 hover:text-slate-600 text-lg leading-none">×</button>
+    </div>
+    <div class="p-4 space-y-3 text-sm">
+      <label class="block"><span class="text-xs text-slate-400">标的</span>
+        <select class="mt-1 w-full border rounded px-2 py-1.5"><option>513330.XSHG 恒生科技</option><option>513120.XSHG 港股创新药</option><option>513530.XSHG 红利低波</option></select>
+      </label>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block"><span class="text-xs text-slate-400">日期</span>
+          <input type="date" value="2026-09-27" class="mt-1 w-full border rounded px-2 py-1.5">
+        </label>
+        <label class="block"><span class="text-xs text-slate-400">方向</span>
+          <select class="mt-1 w-full border rounded px-2 py-1.5"><option>买入</option><option>卖出</option></select>
+        </label>
+      </div>
+      <div class="grid grid-cols-2 gap-3">
+        <label class="block"><span class="text-xs text-slate-400">价格</span>
+          <input value="0.8030" class="mt-1 w-full border rounded px-2 py-1.5">
+        </label>
+        <label class="block"><span class="text-xs text-slate-400">数量（股）</span>
+          <input value="2800" class="mt-1 w-full border rounded px-2 py-1.5">
+        </label>
+      </div>
+      <label class="block"><span class="text-xs text-slate-400">佣金率</span>
+        <input value="0.00020" class="mt-1 w-full border rounded px-2 py-1.5">
+      </label>
+      <label class="block"><span class="text-xs text-slate-400">备注（可选）</span>
+        <input placeholder="如：按计划买 2 格" class="mt-1 w-full border rounded px-2 py-1.5">
+      </label>
+
+      <!-- 本地预览 -->
+      <div class="rounded-lg bg-slate-50 border px-3 py-2.5 text-xs space-y-1">
+        <div class="text-slate-400 font-medium">本地预估（提交前请核对）</div>
+        <div class="flex justify-between"><span>成交金额</span><span>2,248.40</span></div>
+        <div class="flex justify-between"><span>佣金</span><span>0.45</span></div>
+        <div class="flex justify-between font-medium"><span>净额</span><span>2,248.85</span></div>
+      </div>
+    </div>
+    <div class="px-4 py-3 border-t flex items-center justify-between gap-3">
+      <p class="text-xs text-slate-400">记错可再记一笔冲正</p>
+      <div class="flex gap-2">
+        <button id="cancel-record" class="px-3 py-1.5 rounded-md border text-sm hover:bg-slate-50">取消</button>
+        <button class="px-4 py-1.5 rounded-md bg-slate-900 text-white text-sm hover:bg-slate-700">确认记账</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const modal = document.getElementById('record-modal');
+  document.getElementById('open-record').onclick = () => modal.classList.remove('hidden');
+  document.getElementById('close-record').onclick = () => modal.classList.add('hidden');
+  document.getElementById('cancel-record').onclick = () => modal.classList.add('hidden');
+</script>
+</body>
+</html>

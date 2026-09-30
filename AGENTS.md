@@ -2,7 +2,7 @@
 
 > This document is for coding agents working on the project. It defines the project background, the position of this subproject within the Spectres system, its scope, and its development conventions.
 >
-> Last updated: 2026-09-20
+> Last updated: 2026-09-27
 
 ---
 
@@ -53,9 +53,14 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
-### 3.2 Current Milestone (v0.1.0 — MVP, completed)
+### 3.2 Current Milestone (v0.2.0 — ETF Grid Frontend, planned)
 
-One page, one chat: streaming over AG-UI, built-in generic tool-call renderer, `thread_id` persisted in `localStorage` with a "New conversation" button. Completed per [`docs/plan/v0.1.0-mvp-chat-client.md`](docs/plan/v0.1.0-mvp-chat-client.md).
+Standalone ETF Grid status & trade ledger page backed by the Runtime `etf_grid` extension REST API, registered in the app shell's Plugins nav group. Follow-up v0.2.1 adds custom in-chat tool cards. Plans: [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md), [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
+
+### 3.2.1 Completed Milestones
+
+- **v0.1.1 — App Shell**: shadcn/ui sidebar shell (brand row, upper nav, Plugins group, recent-conversations group, user area), official Neutral theme tokens with dark default, navigation registry in `src/nav.ts`. Completed per [`docs/plan/v0.1.1-app-shell.md`](docs/plan/v0.1.1-app-shell.md).
+- **v0.1.0 — MVP**: one page, one chat: streaming over AG-UI, built-in generic tool-call renderer, `thread_id` persisted in `localStorage` with a "New conversation" button. Completed per [`docs/plan/v0.1.0-mvp-chat-client.md`](docs/plan/v0.1.0-mvp-chat-client.md).
 
 ### 3.3 Explicitly Out of Scope
 
@@ -63,7 +68,8 @@ The following belong to other layers or later milestones:
 
 - **Agent logic, tools, memory, persistence**: the Runtime layer. This app contains no business logic beyond presentation concerns.
 - **Backend services of any kind**: no BFF, no server-side state; the only server is the Runtime.
-- **Authentication / multi-tenancy**: deferred (single-user phase).
+- **Authentication / multi-tenancy**: deferred (single-user phase); the shell's user area is a static placeholder.
+- **Router library / deep-linking**: the active view is local React state until a milestone forces a router.
 - **Mini-program and native mobile apps**: separate future projects; design choices here must not preclude them.
 
 ---
@@ -84,11 +90,13 @@ The following belong to other layers or later milestones:
 | Build tool | Vite | `react-ts` template |
 | Framework | React 19 + TypeScript | Strict mode |
 | Agent communication | CopilotKit React SDK (direct AG-UI) | MIT; wiring per official "connect AG-UI agents" docs |
-| Styling | Tailwind CSS | Layout only in v0.1.0; CopilotKit components are themselves Tailwind-styled |
+| UI components | shadcn/ui (vendored in `src/components/ui/`) + Radix UI primitives | Added in v0.1.1 for the app shell; chat surface stays CopilotKit |
+| Icons | lucide-react | shadcn/ui default icon library |
+| Styling | Tailwind CSS + shadcn Neutral theme tokens (`:root` / `.dark`, dark default) | One token file themes shell and CopilotKit chat together |
 | Toolchain runtime | Node.js | **Build-time only** (bundler + dev server); production serves static files, no Node process |
 | Package manager | npm | Lockfile committed |
 
-Deliberately **not** used (v0.1.0): Next.js, state-management libraries, shadcn/ui, test frameworks, CopilotKit Runtime/Cloud.
+Deliberately **not** used: Next.js, state-management libraries, router libraries, test frameworks, CopilotKit Runtime/Cloud.
 
 ---
 

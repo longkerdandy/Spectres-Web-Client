@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-09-20 · Covers: v0.1.0 (MVP)
+> Last updated: 2026-09-27 · Covers: v0.1.1 (App Shell)
 
 ---
 
@@ -77,25 +77,64 @@ Sits on React and the AG-UI client. Three pieces used in v0.1.0:
 Styling note: current CopilotKit components are themselves styled with
 Tailwind utilities (the SDK depends on `tailwind-merge` /
 `tw-animate-css`), so our Tailwind usage for layout is the same styling
-system the components use — no compatibility shim needed.
+system the components use — no compatibility shim needed. Theming note:
+the v2 stylesheet reads the same shadcn-style semantic CSS variables as
+the app shell (`--background`, `--card`, `--primary`, …) and ships its own
+dark values under `.dark [data-copilotkit]`, so putting `.dark` on the
+root element darkens the shell and the chat surface together (§2.6).
 
-### 2.6 App code (this repo)
+### 2.6 shadcn/ui component library (vendored)
+
+The shell's controls come from **shadcn/ui** (owner decision — no
+hand-rolled UI controls outside the chat surface). Per shadcn's
+distribution model, component sources are **vendored into
+`src/components/ui/`** (they are our code, editable); behavior comes from
+the npm-installed **Radix UI** primitives (`radix-ui` package) and icons
+from **`lucide-react`**. `components.json` records the setup (path alias
+`@/` → `src/`, Neutral base color, CSS variables); new components are
+added with `npx shadcn@latest add <name>`.
+
+**Theme token convention**: a single token file (`src/index.css`) defines
+the official shadcn **Neutral** palette as semantic CSS variables in
+`:root` (light) and `.dark` — background/foreground, card, popover,
+primary/secondary, muted, accent, destructive, border/input/ring, chart,
+and the `sidebar-*` set. Both the shell and the CopilotKit chat surface
+read these variables, so one token file themes the whole app. **No custom
+colors**: only the official palette; the root element carries `class="dark"`
+(dark is the default; a toggle is a later nicety).
+
+### 2.7 App code (this repo)
 
 The thinnest layer — everything above is library code:
 
-- **App shell**: full-viewport layout, branding, "New conversation" button.
-- **ChatPage**: the only page; composes the prebuilt chat component and
-  enables the tool renderer.
+- **App shell** (`src/components/app-shell.tsx`): the sidebar frame built
+  from shadcn Sidebar primitives — brand row with collapse trigger, upper
+  nav (新聊天, 定时任务 placeholder, 插件 collapsible group), 最近 group
+  with the current conversation, user area at the bottom — plus the main
+  content area rendering the active view. Sidebar collapse uses the
+  library's icon mode, so the rail keeps icons reachable when collapsed.
+- **Navigation registry** (`src/nav.ts`): all sidebar entries are typed
+  data (`NavItem` / `PluginGroup` / `RecentConversation`), not JSX.
+  Adding a view or a Runtime-extension entry (e.g. v0.2.0's ETF Grid) is
+  a one-record change: extend `ViewId`, add the record, clear `disabled`.
+- **View state**: no router; the active view (`ViewId`) is local React
+  state in `App.tsx`. Only `chat` exists so far.
+- **ChatPage**: composes the prebuilt chat component and enables the tool
+  renderer; rendered inside the shell's main area, behavior unchanged.
 - **`thread.ts`**: `thread_id` helpers — read from `localStorage` on load
   (conversation resumes from the Runtime's PostgreSQL session store),
-  generate and persist a fresh id on "New conversation". The only durable
-  client-side state.
+  generate and persist a fresh id on 新聊天. The only durable
+  client-side state. The `CopilotKit` provider keeps its `key={threadId}`
+  remount mechanism from v0.1.0.
 
 ## 3. Cross-Cutting Concerns
 
 | Concern | Mechanism | Touches |
 |---------|-----------|---------|
 | Styling | Tailwind CSS (plus the CopilotKit prebuilt stylesheet) | App shell, SDK components |
+| Theming | shadcn Neutral semantic tokens in `src/index.css` (`:root` + `.dark`); `.dark` on `<html>` | Shell and `[data-copilotkit]` chat surface |
+| UI components | shadcn/ui vendored in `src/components/ui/`, Radix primitives, lucide-react icons | App shell (not the chat surface) |
+| Navigation | Typed registry in `src/nav.ts`; active view is local state (no router) | App shell |
 | Thread persistence | `localStorage` via `thread.ts` | App code → agent connection |
 | Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring |
 
@@ -118,21 +157,30 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 5. Source Layout (v0.1.0)
+## 5. Source Layout (v0.1.1)
 
 ```text
 src/
-├── main.tsx            # entry; mounts <App/>, imports styles
-├── App.tsx             # shell: layout, branding, New conversation button
-├── agent.ts            # CopilotKit provider setup + HttpAgent wiring
-├── thread.ts           # thread_id localStorage helpers
+├── main.tsx               # entry; mounts <App/>, imports styles
+├── App.tsx                # view state, CopilotKit provider, AppShell wiring
+├── nav.ts                 # typed sidebar registry (nav, plugins, recent)
+├── agent.ts               # HttpAgent wiring + endpoint resolution
+├── thread.ts              # thread_id localStorage helpers
+├── components/
+│   ├── app-shell.tsx      # sidebar frame (shadcn Sidebar primitives)
+│   └── ui/                # vendored shadcn/ui components
+├── hooks/
+│   └── use-mobile.ts      # vendored shadcn hook (sidebar)
+├── lib/
+│   └── utils.ts           # cn() class-merge helper
 ├── pages/
-│   └── ChatPage.tsx    # the only page: prebuilt chat + tool renderer
-└── index.css           # Tailwind entry
+│   └── ChatPage.tsx       # chat view: prebuilt chat + tool renderer
+└── index.css              # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
-Deliberately absent: router, state-management library, component library,
-API abstraction layer (CopilotKit *is* the abstraction), test scaffolding.
+Deliberately absent: router, state-management library, API abstraction
+layer (CopilotKit *is* the abstraction), test scaffolding. The component
+library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 
 ## 6. Error Handling (MVP level)
 
@@ -158,9 +206,10 @@ API abstraction layer (CopilotKit *is* the abstraction), test scaffolding.
 
 | Milestone theme | Architectural impact |
 |-----------------|----------------------|
-| Custom dispatch/tool cards | Custom renderer registrations; possibly introduce shadcn/ui |
+| ETF Grid view (v0.2.0) | First consumer of the shell's plugin registration (`src/nav.ts`) |
+| Custom dispatch/tool cards | Custom renderer registrations on the existing shadcn/ui base |
 | HITL confirmations | SDK's HITL hooks + confirmation card components |
-| Thread list / management | Sidebar + thread metadata from the Runtime; may add a router |
+| Thread list / management | Real entries in the shell's 最近 group + thread metadata from the Runtime; may add a router |
 | Per-Slave transparency | Consume Runtime's custom AG-UI events (Runtime ADR 0004 phase 2); subtask UI |
 | Remote/cloud deployment | Only `VITE_AGENT_ENDPOINT` changes (Runtime ADR 0005) |
 | Tests | Introduce vitest when component logic outgrows manual walkthroughs |
@@ -168,7 +217,8 @@ API abstraction layer (CopilotKit *is* the abstraction), test scaffolding.
 ## 9. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — current milestone plan
+- [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — current milestone plan
+- [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — previous milestone plan
 - Runtime architecture: `../../Spectres-Runtime/docs/architecture.md`
 - Runtime ADR 0004 (AG-UI visibility), ADR 0005 (deployment topology): `../../Spectres-Runtime/docs/adr/`
 - CopilotKit — connect AG-UI agents: https://docs.copilotkit.ai/backend/ag-ui
