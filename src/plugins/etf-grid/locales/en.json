@@ -1,0 +1,12 @@
+{
+  "nav": {
+    "title": "ETF Grid"
+  },
+  "page": {
+    "title": "ETF Grid",
+    "description": "Live status and ledger of the grid trading strategy.",
+    "underConstruction": "Under construction",
+    "underConstructionDescription": "This plugin page will provide the full grid status and ledger in v0.2.0.",
+    "frameworkFooter": "ETF Grid plugin · v0.1.2 framework validation"
+  }
+}

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import { ChevronDown } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -33,7 +34,7 @@ import {
   type NavItem,
   type ViewId,
 } from "@/nav";
-import { navItems as pluginNavItems, type PluginNavItem } from "@/plugins";
+import { navItems as pluginNavItems, type PluginNavEntry } from "@/plugins";
 
 /** Eagerly discovered at build time; constant for the app's lifetime. */
 const pluginItems = pluginNavItems();
@@ -59,6 +60,8 @@ export function AppShell({
   onResetThread,
   children,
 }: AppShellProps) {
+  const { t } = useTranslation("common");
+
   function runAction(action: NavAction | undefined) {
     if (!action) return;
     switch (action.type) {
@@ -80,14 +83,14 @@ export function AppShell({
           onClick={() => runAction(item.action)}
         >
           <item.icon />
-          <span>{item.label}</span>
-          {item.badge && <NavBadge label={item.badge} />}
+          <span>{t(item.labelKey)}</span>
+          {item.badgeKey && <NavBadge label={t(item.badgeKey)} />}
         </SidebarMenuButton>
       </SidebarMenuItem>
     );
   }
 
-  function renderPluginNavItem(item: PluginNavItem) {
+  function renderPluginNavItem(item: PluginNavEntry) {
     return (
       <SidebarMenuSubItem key={item.id}>
         <SidebarMenuSubButton
@@ -95,10 +98,10 @@ export function AppShell({
           onClick={() => onSelectView(item.id)}
         >
           <item.icon />
-          <span>{item.label}</span>
-          {item.badge && (
+          <span>{t(`${item.namespace}:${item.labelKey}`)}</span>
+          {item.badgeKey && (
             <span className="ml-auto rounded-full bg-sidebar-accent px-1.5 py-0.5 text-[10px] text-sidebar-foreground/70">
-              {item.badge}
+              {t(`${item.namespace}:${item.badgeKey}`)}
             </span>
           )}
         </SidebarMenuSubButton>
@@ -126,7 +129,7 @@ export function AppShell({
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton>
                         <pluginGroup.icon />
-                        <span>{pluginGroup.label}</span>
+                        <span>{t(pluginGroup.labelKey)}</span>
                         <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
                       </SidebarMenuButton>
                     </CollapsibleTrigger>
@@ -142,7 +145,7 @@ export function AppShell({
           </SidebarGroup>
 
           <SidebarGroup>
-            <SidebarGroupLabel>最近</SidebarGroupLabel>
+            <SidebarGroupLabel>{t("nav.recent")}</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {recentConversations.map((conversation) => (
@@ -152,7 +155,7 @@ export function AppShell({
                       onClick={() => onSelectView(conversation.view)}
                     >
                       <conversation.icon />
-                      <span>{conversation.title}</span>
+                      <span>{t(conversation.titleKey)}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}
@@ -168,7 +171,9 @@ export function AppShell({
             </Avatar>
             <div className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
               <div className="truncate text-sm">Dong-xu Gu</div>
-              <div className="text-xs text-muted-foreground">本地单用户</div>
+              <div className="text-xs text-muted-foreground">
+                {t("user.localSingleUser")}
+              </div>
             </div>
           </div>
         </SidebarFooter>

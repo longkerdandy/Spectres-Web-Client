@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-09-30 · Covers: v0.1.2 (Plugin Framework)
+> Last updated: 2026-09-30 · Covers: v0.1.3 (Internationalization)
 
 ---
 
@@ -70,7 +70,9 @@ Sits on React and the AG-UI client. Three pieces used in v0.1.0:
   instance is passed via `selfManagedAgents` — a direct AG-UI connection
   with no CopilotKit Runtime, no CopilotKit Cloud, no API keys.
 - **prebuilt chat component** (`CopilotChat` from the same v2 surface):
-  message list, streaming rendering, input.
+  message list, streaming rendering, input. Its built-in English labels
+  (placeholder, welcome message, disclaimer, toolbar tooltips) are fed
+  from the i18n layer (§4).
 - **built-in generic tool-call renderer** (`useDefaultRenderTool`): tool
   calls appear as cards with running/done states.
 
@@ -109,25 +111,27 @@ The thinnest layer — everything above is library code:
 
 - **App shell** (`src/components/app-shell.tsx`): the sidebar frame built
   from shadcn Sidebar primitives — brand row with collapse trigger, upper
-  nav (新聊天, 定时任务 placeholder, 插件 collapsible group), 最近 group
-  with the current conversation, user area at the bottom — plus the main
-  content area rendering the active view. Sidebar collapse uses the
-  library's icon mode, so the rail keeps icons reachable when collapsed.
+  nav (New chat, Scheduled tasks placeholder, Plugins collapsible group),
+  Recent group with the current conversation, user area at the bottom —
+  plus the main content area rendering the active view. Sidebar collapse
+  uses the library's icon mode, so the rail keeps icons reachable when
+  collapsed. All copy is resolved from the i18n layer (§4).
 - **Navigation registry** (`src/nav.ts`): core sidebar entries are typed
-  data (`NavItem` / `PluginGroup` / `RecentConversation`), not JSX.
-  Plugin entries are **not** registered here — they come from the plugin
-  framework (§3).
+  data (`NavItem` / `PluginGroup` / `RecentConversation`) holding
+  translation **keys**, not copy. Plugin entries are **not** registered
+  here — they come from the plugin framework (§3).
 - **View state**: no router; the active view (`ViewId`) is local React
   state in `app.tsx` — the `"chat"` literal widened to include any
   plugin-contributed view id. The chat page stays mounted (hidden) while
   a plugin view is shown, so the conversation survives view switches.
-- **ChatPage**: composes the prebuilt chat component and enables the tool
-  renderer; rendered inside the shell's main area, behavior unchanged.
+- **ChatPage**: composes the prebuilt chat component, enables the tool
+  renderer, and maps the SDK's chat labels from `common` namespace keys.
 - **`thread.ts`**: `thread_id` helpers — read from `localStorage` on load
   (conversation resumes from the Runtime's PostgreSQL session store),
-  generate and persist a fresh id on 新聊天. The only durable
-  client-side state. The `CopilotKit` provider keeps its `key={threadId}`
-  remount mechanism from v0.1.0.
+  generate and persist a fresh id on New chat. The only durable
+  client-side state besides the i18n language preference (§4). The
+  `CopilotKit` provider keeps its `key={threadId}` remount mechanism from
+  v0.1.0.
 
 ## 3. Plugin Framework
 
@@ -137,21 +141,24 @@ that idea with its own build-time plugin mechanism so the shell never
 hand-registers a Runtime-extension entry again.
 
 - **Plugin = one self-contained directory** under `src/plugins/<id>/`,
-  holding its own views, API client, types, and components. Nothing about
-  a plugin lives outside its directory.
+  holding its own views, API client, types, components, and locale files.
+  Nothing about a plugin lives outside its directory.
 - **Contract** (`src/plugins/types.ts`): `definePlugin({ id, contributes })`.
   `contributes` is an **extension-point bag** — the platform defines typed
   points (`navItems` for the sidebar Plugins group, `views` for main-area
-  pages today; `toolCards` arrives in v0.2.1) and plugins declare
-  contributions. New points are new optional fields, so existing plugins
-  never change when the platform grows one. Plugin ids match the Runtime
-  extension name (`etf-grid` ↔ `etf_grid`).
+  pages, `locales` for translation bundles today; `toolCards` arrives in
+  v0.2.1) and plugins declare contributions. New points are new optional
+  fields, so existing plugins never change when the platform grows one.
+  Plugin ids match the Runtime extension name (`etf-grid` ↔ `etf_grid`).
 - **Discovery** (`src/plugins/index.ts`): `import.meta.glob("./*/index.ts",
   { eager: true })` — every plugin directory's manifest is bundled at
-  build time. Presence in the tree is the only opt-in (no enable/disable
-  gating), and a wrong-shaped manifest fails `npm run typecheck` through
-  `definePlugin` — fail-loud, never silently degraded. The registry
-  aggregates contributions by extension point: `navItems()` and
+  build time. This is the platform's **only** scan of the plugins tree;
+  everything else (nav items, views, locale bundles) arrives through the
+  typed manifest. Presence in the tree is the only opt-in (no
+  enable/disable gating), and a wrong-shaped manifest fails
+  `npm run typecheck` through `definePlugin` — fail-loud, never silently
+  degraded. The registry aggregates contributions by extension point:
+  `navItems()` (each entry carrying its plugin's i18n namespace) and
   `viewFor(id)`.
 - **Adding a plugin**: create `src/plugins/<id>/index.ts` (default-export
   `definePlugin({...})`) plus its view component — zero edits outside the
@@ -167,13 +174,62 @@ The first plugin, `etf-grid`, ships a blank placeholder page purely to
 validate the chain (discovery → nav → view switch); v0.2.0 fills it with
 the real ETF Grid UI.
 
-## 4. Cross-Cutting Concerns
+## 4. Internationalization (i18n)
+
+All user-facing copy lives in keyed locale resources; nothing is
+hardcoded in components. The UI currently ships **English only** — the
+infrastructure (language resolution, persistence, plugin namespaces) is
+complete, so a new language is a data-only addition.
+
+- **Library**: react-i18next (`i18next` + `initReactI18next`). Chosen over
+  a hand-rolled context/dictionary for its interpolation, pluralization,
+  fallback chain, and its **namespace** model, which maps 1:1 onto the
+  plugin architecture.
+- **Core** (`src/i18n/index.ts`): `SUPPORTED_LANGUAGES` is the single
+  supported-language list (`["en"]` today; the first entry is the
+  default). Resolution order at startup:
+  `localStorage("spectres:lang")` → `navigator.language` → default. The
+  resolved language is persisted and mirrored to
+  `document.documentElement.lang`; both update on `languageChanged`.
+- **Namespaces**: `common` for the core shell (nav, user area, chat
+  labels); each plugin's namespace equals its manifest `id`
+  (`etf-grid`). Components resolve keys via `useTranslation(<ns>)`;
+  cross-namespace references use `t("<ns>:<key>")`.
+- **Synchronous registration**: every supported language's bundles —
+  core plus each plugin manifest's `contributes.locales` — are folded
+  into one `resources` object passed to `i18next.init()`, which
+  `main.tsx` imports before rendering. No async loading, no raw keys on
+  first paint, and `changeLanguage()` switches instantly. Languages
+  outside `SUPPORTED_LANGUAGES` are ignored at init, so plugins may ship
+  future locales early.
+- **Plugin locales** are a manifest contribution (§3): each plugin
+  bundles its own `locales/*.json` via
+  `defineLocales(import.meta.glob("./locales/*.json", { eager: true, import: "default" }))`,
+  registered under the namespace equal to its manifest `id` — the single
+  source of truth for plugin identity.
+- **CopilotKit chat labels**: `chat-page.tsx` maps the SDK's
+  `CopilotChatLabels` (input placeholder, welcome message, disclaimer,
+  toolbar tooltips) from `common` keys, so the chat surface follows the
+  active language too.
+- **Data files hold keys, not copy**: `src/nav.ts` and plugin manifests
+  carry `labelKey` / `badgeKey` / `titleKey`; rendering components
+  translate.
+- **Adding a language**: add `src/i18n/locales/<lang>/common.json`, plus
+  one entry in `SUPPORTED_LANGUAGES` and `coreResources`; plugins add
+  their own `locales/<lang>.json`. No component changes.
+- **Deliberately absent**: language switcher UI (arrives with the second
+  locale), type-safe translation keys, ICU MessageFormat, per-language
+  code splitting of locale bundles (eager; revisit when bundle size
+  forces it), date/number formatting (added per-milestone when needed).
+
+## 5. Cross-Cutting Concerns
 
 | Concern | Mechanism | Touches |
 |---------|-----------|---------|
 | Styling | Tailwind CSS (plus the CopilotKit prebuilt stylesheet) | App shell, SDK components |
 | Theming | shadcn Neutral semantic tokens in `src/index.css` (`:root` + `.dark`); `.dark` on `<html>` | Shell and `[data-copilotkit]` chat surface |
 | UI components | shadcn/ui vendored in `src/components/ui/`, Radix primitives, lucide-react icons | App shell (not the chat surface) |
+| Internationalization | react-i18next; `common` + per-plugin namespaces, all bundles registered synchronously at init | All UI copy |
 | Navigation | Core registry in `src/nav.ts` + plugin registry in `src/plugins/`; active view is local state (no router) | App shell |
 | Thread persistence | `localStorage` via `thread.ts` | App code → agent connection |
 | Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring |
@@ -181,7 +237,7 @@ the real ETF Grid UI.
 One configuration mechanism for all environments; no environment-detection
 branches anywhere in the code.
 
-## 5. Run Lifecycle (data flow)
+## 6. Run Lifecycle (data flow)
 
 1. User sends a message in the chat component.
 2. The provider builds a `RunAgentInput` (thread id, run id, messages,
@@ -197,21 +253,28 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 6. Source Layout (v0.1.2)
+## 7. Source Layout (v0.1.3)
 
 ```text
 src/
-├── main.tsx               # entry; mounts <App/>, imports styles
+├── main.tsx               # entry; imports i18n (sync init) + styles, mounts <App/>
 ├── app.tsx                # view state, CopilotKit provider, AppShell wiring
-├── nav.ts                 # typed core sidebar registry (nav, group headers, recent)
+├── nav.ts                 # typed core sidebar registry (translation keys, not copy)
 ├── ag-ui.ts               # HttpAgent wiring + endpoint resolution
 ├── thread.ts              # thread_id localStorage helpers
+├── i18n/
+│   ├── index.ts           # i18next init: language resolution, resource assembly
+│   └── locales/
+│       └── en/
+│           └── common.json    # core `common` namespace (English)
 ├── plugins/
-│   ├── types.ts           # plugin contract: definePlugin + extension-point bag
+│   ├── types.ts           # plugin contract: definePlugin/defineLocales + extension points
 │   ├── index.ts           # build-time discovery (import.meta.glob) + aggregation
 │   └── etf-grid/          # first plugin — blank page validating the framework
-│       ├── index.ts       # manifest (nav item + view contribution)
-│       └── grid-page.tsx  # placeholder view (real UI lands in v0.2.0)
+│       ├── index.ts       # manifest (nav item + view + locales contribution)
+│       ├── grid-page.tsx  # placeholder view (real UI lands in v0.2.0)
+│       └── locales/
+│           └── en.json    # plugin `etf-grid` namespace (English)
 ├── components/
 │   ├── app-shell.tsx      # sidebar frame (shadcn Sidebar primitives)
 │   └── ui/                # vendored shadcn/ui components
@@ -220,7 +283,7 @@ src/
 ├── lib/
 │   └── utils.ts           # cn() class-merge helper
 ├── pages/
-│   └── chat-page.tsx      # chat view: prebuilt chat + tool renderer
+│   └── chat-page.tsx      # chat view: prebuilt chat + tool renderer + label mapping
 └── index.css              # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
@@ -228,7 +291,7 @@ Deliberately absent: router, state-management library, API abstraction
 layer (CopilotKit *is* the abstraction), test scaffolding. The component
 library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 
-## 7. Error Handling (MVP level)
+## 8. Error Handling (MVP level)
 
 - **Runtime unreachable / wrong endpoint**: the chat surface shows the
   connection error surfaced by the SDK; README documents checking
@@ -239,7 +302,7 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 - No retry queues, offline handling, or error boundaries beyond the SDK
   defaults in this milestone.
 
-## 8. Boundaries (what this app must never grow into)
+## 9. Boundaries (what this app must never grow into)
 
 - No business logic, agent logic, or prompt construction — that is the
   Runtime's job.
@@ -248,24 +311,26 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
   only contract.
 - Durable user data beyond `localStorage` thread id belongs to the Runtime.
 
-## 9. Evolution Path (later milestones)
+## 10. Evolution Path (later milestones)
 
 | Milestone theme | Architectural impact |
 |-----------------|----------------------|
+| Additional locales (e.g. zh-CN) | Data-only: new `*.json` files + `SUPPORTED_LANGUAGES`/`coreResources` entries; the language switcher UI arrives with the second locale |
 | ETF Grid view (v0.2.0) | Fills the blank `etf-grid` plugin page with the real grid UI + API client (introduces `PluginContext` if endpoint injection is needed) |
 | ETF Grid chat cards (v0.2.1) | New `toolCards` extension point on the plugin contract — zero changes to existing plugins |
 | Custom dispatch/tool cards | Custom renderer registrations on the existing shadcn/ui base |
 | HITL confirmations | SDK's HITL hooks + confirmation card components |
-| Thread list / management | Real entries in the shell's 最近 group + thread metadata from the Runtime; may add a router |
+| Thread list / management | Real entries in the shell's Recent group + thread metadata from the Runtime; may add a router |
 | Per-Slave transparency | Consume Runtime's custom AG-UI events (Runtime ADR 0004 phase 2); subtask UI |
 | Remote/cloud deployment | Only `VITE_AGENT_ENDPOINT` changes (Runtime ADR 0005) |
 | Tests | Introduce vitest when component logic outgrows manual walkthroughs |
 
-## 10. References
+## 11. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.1.2-plugin-framework.md`](plan/v0.1.2-plugin-framework.md) — current milestone plan
-- [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — previous milestone plan
+- [`docs/plan/v0.1.3-i18n.md`](plan/v0.1.3-i18n.md) — current milestone plan
+- [`docs/plan/v0.1.2-plugin-framework.md`](plan/v0.1.2-plugin-framework.md) — plugin framework milestone plan
+- [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — app shell milestone plan
 - [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — MVP milestone plan
 - Runtime architecture: `../../Spectres-Runtime/docs/architecture.md`
 - Runtime ADR 0004 (AG-UI visibility), ADR 0005 (deployment topology): `../../Spectres-Runtime/docs/adr/`

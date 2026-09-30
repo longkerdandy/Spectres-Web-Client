@@ -59,6 +59,8 @@ Fills the blank ETF Grid plugin page from v0.1.2 with the real grid UI backed by
 
 ### 3.2.1 Completed Milestones
 
+- **v0.1.3 — Internationalization**: react-i18next with namespace-per-plugin — core `common` namespace plus plugin manifests contributing their own locale bundles via `defineLocales`, all registered synchronously at init; UI ships English only, additional locales are data-only follow-ups. Completed per [`docs/plan/v0.1.3-i18n.md`](docs/plan/v0.1.3-i18n.md).
+
 - **v0.1.2 — Plugin Framework**: extension-point-based plugin architecture — self-contained plugin directories under `src/plugins/`, typed `definePlugin` contract, build-time auto-discovery via `import.meta.glob` — validated by a blank ETF Grid plugin page. Completed per [`docs/plan/v0.1.2-plugin-framework.md`](docs/plan/v0.1.2-plugin-framework.md).
 
 - **v0.1.1 — App Shell**: shadcn/ui sidebar shell (brand row, upper nav, Plugins group, recent-conversations group, user area), official Neutral theme tokens with dark default, navigation registry in `src/nav.ts`. Completed per [`docs/plan/v0.1.1-app-shell.md`](docs/plan/v0.1.1-app-shell.md).

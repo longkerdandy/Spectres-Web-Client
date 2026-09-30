@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ChartColumn } from "lucide-react";
 import {
   Card,
@@ -15,25 +16,25 @@ import {
  * UI backed by the Runtime's `etf_grid` extension.
  */
 export default function GridPage() {
+  const { t } = useTranslation("etf-grid");
+
   return (
     <div className="flex h-full flex-col">
       <header className="border-b px-6 py-4">
-        <h1 className="text-lg font-semibold">ETF 网格</h1>
-        <p className="text-sm text-muted-foreground">
-          网格交易策略的运行状态与账本视图。
-        </p>
+        <h1 className="text-lg font-semibold">{t("page.title")}</h1>
+        <p className="text-sm text-muted-foreground">{t("page.description")}</p>
       </header>
       <div className="flex flex-1 items-center justify-center p-6">
         <Card className="w-full max-w-sm border-dashed">
           <CardHeader className="items-center text-center">
             <ChartColumn className="size-10 text-muted-foreground" />
-            <CardTitle>页面建设中</CardTitle>
+            <CardTitle>{t("page.underConstruction")}</CardTitle>
             <CardDescription>
-              该插件页面将在 v0.2.0 中提供完整的网格状态与账本功能。
+              {t("page.underConstructionDescription")}
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center text-xs text-muted-foreground">
-            ETF Grid plugin · v0.1.2 framework validation
+            {t("page.frameworkFooter")}
           </CardContent>
         </Card>
       </div>

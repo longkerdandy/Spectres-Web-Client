@@ -1,0 +1,37 @@
+{
+  "nav": {
+    "newChat": "New chat",
+    "scheduledTasks": "Scheduled tasks",
+    "scheduledTasksBadge": "Soon",
+    "plugins": "Plugins",
+    "recent": "Recent",
+    "currentConversation": "Current conversation"
+  },
+  "user": {
+    "localSingleUser": "Local single user"
+  },
+  "chat": {
+    "labels": {
+      "chatInputPlaceholder": "Type a message...",
+      "chatInputToolbarStartTranscribeButtonLabel": "Transcribe",
+      "chatInputToolbarCancelTranscribeButtonLabel": "Cancel",
+      "chatInputToolbarFinishTranscribeButtonLabel": "Finish",
+      "chatInputToolbarAddButtonLabel": "Add attachments",
+      "chatInputToolbarToolsButtonLabel": "Tools",
+      "assistantMessageToolbarCopyCodeLabel": "Copy",
+      "assistantMessageToolbarCopyCodeCopiedLabel": "Copied",
+      "assistantMessageToolbarCopyMessageLabel": "Copy",
+      "assistantMessageToolbarThumbsUpLabel": "Good response",
+      "assistantMessageToolbarThumbsDownLabel": "Bad response",
+      "assistantMessageToolbarReadAloudLabel": "Read aloud",
+      "assistantMessageToolbarRegenerateLabel": "Regenerate",
+      "userMessageToolbarCopyMessageLabel": "Copy",
+      "userMessageToolbarEditMessageLabel": "Edit",
+      "chatDisclaimerText": "AI can make mistakes. Please verify important information.",
+      "chatToggleOpenLabel": "Open chat",
+      "chatToggleCloseLabel": "Close chat",
+      "modalHeaderTitle": "Spectres",
+      "welcomeMessageText": "How can I help you today?"
+    }
+  }
+}

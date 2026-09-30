@@ -23,23 +23,27 @@ export type NavAction =
 
 export interface NavItem {
   id: string;
-  label: string;
+  /** Translation key in the `common` namespace, resolved by the shell. */
+  labelKey: string;
   icon: LucideIcon;
   /** Omit for placeholders; `disabled` renders the entry inert. */
   action?: NavAction;
   disabled?: boolean;
-  badge?: string;
+  /** Translation key in the `common` namespace, like `labelKey`. */
+  badgeKey?: string;
 }
 
 export interface PluginGroup {
   id: string;
-  label: string;
+  /** Translation key in the `common` namespace. */
+  labelKey: string;
   icon: LucideIcon;
 }
 
 export interface RecentConversation {
   id: string;
-  title: string;
+  /** Translation key in the `common` namespace. */
+  titleKey: string;
   /** Shown when the sidebar collapses to icon mode. */
   icon: LucideIcon;
   view: ViewId;
@@ -48,27 +52,27 @@ export interface RecentConversation {
 export const primaryNav: NavItem[] = [
   {
     id: "new-chat",
-    label: "新聊天",
+    labelKey: "nav.newChat",
     icon: SquarePen,
     action: { type: "reset-thread" },
   },
   {
     id: "scheduled-tasks",
-    label: "定时任务",
+    labelKey: "nav.scheduledTasks",
     icon: Clock,
     disabled: true,
-    badge: "未来",
+    badgeKey: "nav.scheduledTasksBadge",
   },
 ];
 
 /** Group header only; the child entries come from the plugin registry. */
 export const pluginGroup: PluginGroup = {
   id: "plugins",
-  label: "插件",
+  labelKey: "nav.plugins",
   icon: Puzzle,
 };
 
 /** Only the current conversation is real; history arrives with thread management. */
 export const recentConversations: RecentConversation[] = [
-  { id: "current", title: "当前会话", icon: MessageSquare, view: "chat" },
+  { id: "current", titleKey: "nav.currentConversation", icon: MessageSquare, view: "chat" },
 ];

@@ -1,5 +1,5 @@
 import { ChartColumn } from "lucide-react";
-import { definePlugin } from "../types";
+import { defineLocales, definePlugin } from "../types";
 import GridPage from "./grid-page";
 
 /**
@@ -13,8 +13,14 @@ export default definePlugin({
   id: "etf-grid",
   contributes: {
     navItems: [
-      { id: "etf-grid", label: "ETF 网格", icon: ChartColumn },
+      { id: "etf-grid", labelKey: "nav.title", icon: ChartColumn },
     ],
     views: [{ id: "etf-grid", component: GridPage }],
+    locales: defineLocales(
+      import.meta.glob("./locales/*.json", {
+        eager: true,
+        import: "default",
+      }),
+    ),
   },
 });
