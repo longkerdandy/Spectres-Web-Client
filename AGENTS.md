@@ -53,9 +53,9 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
-### 3.2 Current Milestone (v0.2.0 — ETF Grid Frontend, planned)
+### 3.2 Current Milestone (v0.1.2 — Plugin Framework, planned)
 
-Standalone ETF Grid status & trade ledger page backed by the Runtime `etf_grid` extension REST API, registered in the app shell's Plugins nav group. Follow-up v0.2.1 adds custom in-chat tool cards. Plans: [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md), [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
+Extension-point-based plugin architecture: self-contained plugin directories under `src/plugins/`, a typed `definePlugin` contract, and build-time auto-discovery via `import.meta.glob`; validated by a blank ETF Grid plugin page. Plan: [`docs/plan/v0.1.2-plugin-framework.md`](docs/plan/v0.1.2-plugin-framework.md). Next: v0.2.0 fills that page with the real ETF Grid UI ([`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md)), v0.2.1 adds in-chat tool cards ([`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md)).
 
 ### 3.2.1 Completed Milestones
 
