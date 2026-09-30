@@ -33,6 +33,10 @@ import {
   type NavItem,
   type ViewId,
 } from "@/nav";
+import { navItems as pluginNavItems, type PluginNavItem } from "@/plugins";
+
+/** Eagerly discovered at build time; constant for the app's lifetime. */
+const pluginItems = pluginNavItems();
 
 interface AppShellProps {
   activeView: ViewId;
@@ -83,6 +87,25 @@ export function AppShell({
     );
   }
 
+  function renderPluginNavItem(item: PluginNavItem) {
+    return (
+      <SidebarMenuSubItem key={item.id}>
+        <SidebarMenuSubButton
+          isActive={activeView === item.id}
+          onClick={() => onSelectView(item.id)}
+        >
+          <item.icon />
+          <span>{item.label}</span>
+          {item.badge && (
+            <span className="ml-auto rounded-full bg-sidebar-accent px-1.5 py-0.5 text-[10px] text-sidebar-foreground/70">
+              {item.badge}
+            </span>
+          )}
+        </SidebarMenuSubButton>
+      </SidebarMenuSubItem>
+    );
+  }
+
   return (
     <SidebarProvider>
       <Sidebar collapsible="icon">
@@ -109,22 +132,7 @@ export function AppShell({
                     </CollapsibleTrigger>
                     <CollapsibleContent>
                       <SidebarMenuSub>
-                        {pluginGroup.items.map((item) => (
-                          <SidebarMenuSubItem key={item.id}>
-                            <SidebarMenuSubButton
-                              aria-disabled={item.disabled || undefined}
-                              onClick={() => runAction(item.action)}
-                            >
-                              <item.icon />
-                              <span>{item.label}</span>
-                              {item.badge && (
-                                <span className="ml-auto rounded-full bg-sidebar-accent px-1.5 py-0.5 text-[10px] text-sidebar-foreground/70">
-                                  {item.badge}
-                                </span>
-                              )}
-                            </SidebarMenuSubButton>
-                          </SidebarMenuSubItem>
-                        ))}
+                        {pluginItems.map(renderPluginNavItem)}
                       </SidebarMenuSub>
                     </CollapsibleContent>
                   </Collapsible>

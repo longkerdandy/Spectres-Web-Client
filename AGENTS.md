@@ -2,7 +2,7 @@
 
 > This document is for coding agents working on the project. It defines the project background, the position of this subproject within the Spectres system, its scope, and its development conventions.
 >
-> Last updated: 2026-09-27
+> Last updated: 2026-09-30
 
 ---
 
@@ -53,11 +53,13 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
-### 3.2 Current Milestone (v0.1.2 — Plugin Framework, planned)
+### 3.2 Current Milestone (v0.2.0 — ETF Grid Frontend, planned)
 
-Extension-point-based plugin architecture: self-contained plugin directories under `src/plugins/`, a typed `definePlugin` contract, and build-time auto-discovery via `import.meta.glob`; validated by a blank ETF Grid plugin page. Plan: [`docs/plan/v0.1.2-plugin-framework.md`](docs/plan/v0.1.2-plugin-framework.md). Next: v0.2.0 fills that page with the real ETF Grid UI ([`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md)), v0.2.1 adds in-chat tool cards ([`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md)).
+Fills the blank ETF Grid plugin page from v0.1.2 with the real grid UI backed by the Runtime's `etf_grid` extension. Plan: [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md). Next: v0.2.1 adds in-chat tool cards ([`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md)).
 
 ### 3.2.1 Completed Milestones
+
+- **v0.1.2 — Plugin Framework**: extension-point-based plugin architecture — self-contained plugin directories under `src/plugins/`, typed `definePlugin` contract, build-time auto-discovery via `import.meta.glob` — validated by a blank ETF Grid plugin page. Completed per [`docs/plan/v0.1.2-plugin-framework.md`](docs/plan/v0.1.2-plugin-framework.md).
 
 - **v0.1.1 — App Shell**: shadcn/ui sidebar shell (brand row, upper nav, Plugins group, recent-conversations group, user area), official Neutral theme tokens with dark default, navigation registry in `src/nav.ts`. Completed per [`docs/plan/v0.1.1-app-shell.md`](docs/plan/v0.1.1-app-shell.md).
 - **v0.1.0 — MVP**: one page, one chat: streaming over AG-UI, built-in generic tool-call renderer, `thread_id` persisted in `localStorage` with a "New conversation" button. Completed per [`docs/plan/v0.1.0-mvp-chat-client.md`](docs/plan/v0.1.0-mvp-chat-client.md).

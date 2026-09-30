@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-09-27 · Covers: v0.1.1 (App Shell)
+> Last updated: 2026-09-30 · Covers: v0.1.2 (Plugin Framework)
 
 ---
 
@@ -113,12 +113,14 @@ The thinnest layer — everything above is library code:
   with the current conversation, user area at the bottom — plus the main
   content area rendering the active view. Sidebar collapse uses the
   library's icon mode, so the rail keeps icons reachable when collapsed.
-- **Navigation registry** (`src/nav.ts`): all sidebar entries are typed
+- **Navigation registry** (`src/nav.ts`): core sidebar entries are typed
   data (`NavItem` / `PluginGroup` / `RecentConversation`), not JSX.
-  Adding a view or a Runtime-extension entry (e.g. v0.2.0's ETF Grid) is
-  a one-record change: extend `ViewId`, add the record, clear `disabled`.
+  Plugin entries are **not** registered here — they come from the plugin
+  framework (§3).
 - **View state**: no router; the active view (`ViewId`) is local React
-  state in `app.tsx`. Only `chat` exists so far.
+  state in `app.tsx` — the `"chat"` literal widened to include any
+  plugin-contributed view id. The chat page stays mounted (hidden) while
+  a plugin view is shown, so the conversation survives view switches.
 - **ChatPage**: composes the prebuilt chat component and enables the tool
   renderer; rendered inside the shell's main area, behavior unchanged.
 - **`thread.ts`**: `thread_id` helpers — read from `localStorage` on load
@@ -127,21 +129,59 @@ The thinnest layer — everything above is library code:
   client-side state. The `CopilotKit` provider keeps its `key={threadId}`
   remount mechanism from v0.1.0.
 
-## 3. Cross-Cutting Concerns
+## 3. Plugin Framework
+
+Runtime extensions keep multiplying (`spectres/extensions/` packages with
+`name` + `register(ctx)`, discovered via `pkgutil`); the client mirrors
+that idea with its own build-time plugin mechanism so the shell never
+hand-registers a Runtime-extension entry again.
+
+- **Plugin = one self-contained directory** under `src/plugins/<id>/`,
+  holding its own views, API client, types, and components. Nothing about
+  a plugin lives outside its directory.
+- **Contract** (`src/plugins/types.ts`): `definePlugin({ id, contributes })`.
+  `contributes` is an **extension-point bag** — the platform defines typed
+  points (`navItems` for the sidebar Plugins group, `views` for main-area
+  pages today; `toolCards` arrives in v0.2.1) and plugins declare
+  contributions. New points are new optional fields, so existing plugins
+  never change when the platform grows one. Plugin ids match the Runtime
+  extension name (`etf-grid` ↔ `etf_grid`).
+- **Discovery** (`src/plugins/index.ts`): `import.meta.glob("./*/index.ts",
+  { eager: true })` — every plugin directory's manifest is bundled at
+  build time. Presence in the tree is the only opt-in (no enable/disable
+  gating), and a wrong-shaped manifest fails `npm run typecheck` through
+  `definePlugin` — fail-loud, never silently degraded. The registry
+  aggregates contributions by extension point: `navItems()` and
+  `viewFor(id)`.
+- **Adding a plugin**: create `src/plugins/<id>/index.ts` (default-export
+  `definePlugin({...})`) plus its view component — zero edits outside the
+  new directory. The sidebar entry and main-area routing appear on the
+  next build.
+- **Deliberately absent**: runtime loading / Module Federation (single
+  user, single repo — plugins ship with the app), lazy loading (eager
+  glob; revisit when bundle size forces it), `PluginContext` injection
+  (lands with v0.2.0's API client, YAGNI for blank pages), npm-distributed
+  third-party plugins.
+
+The first plugin, `etf-grid`, ships a blank placeholder page purely to
+validate the chain (discovery → nav → view switch); v0.2.0 fills it with
+the real ETF Grid UI.
+
+## 4. Cross-Cutting Concerns
 
 | Concern | Mechanism | Touches |
 |---------|-----------|---------|
 | Styling | Tailwind CSS (plus the CopilotKit prebuilt stylesheet) | App shell, SDK components |
 | Theming | shadcn Neutral semantic tokens in `src/index.css` (`:root` + `.dark`); `.dark` on `<html>` | Shell and `[data-copilotkit]` chat surface |
 | UI components | shadcn/ui vendored in `src/components/ui/`, Radix primitives, lucide-react icons | App shell (not the chat surface) |
-| Navigation | Typed registry in `src/nav.ts`; active view is local state (no router) | App shell |
+| Navigation | Core registry in `src/nav.ts` + plugin registry in `src/plugins/`; active view is local state (no router) | App shell |
 | Thread persistence | `localStorage` via `thread.ts` | App code → agent connection |
 | Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring |
 
 One configuration mechanism for all environments; no environment-detection
 branches anywhere in the code.
 
-## 4. Run Lifecycle (data flow)
+## 5. Run Lifecycle (data flow)
 
 1. User sends a message in the chat component.
 2. The provider builds a `RunAgentInput` (thread id, run id, messages,
@@ -157,15 +197,21 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 5. Source Layout (v0.1.1)
+## 6. Source Layout (v0.1.2)
 
 ```text
 src/
 ├── main.tsx               # entry; mounts <App/>, imports styles
 ├── app.tsx                # view state, CopilotKit provider, AppShell wiring
-├── nav.ts                 # typed sidebar registry (nav, plugins, recent)
+├── nav.ts                 # typed core sidebar registry (nav, group headers, recent)
 ├── ag-ui.ts               # HttpAgent wiring + endpoint resolution
 ├── thread.ts              # thread_id localStorage helpers
+├── plugins/
+│   ├── types.ts           # plugin contract: definePlugin + extension-point bag
+│   ├── index.ts           # build-time discovery (import.meta.glob) + aggregation
+│   └── etf-grid/          # first plugin — blank page validating the framework
+│       ├── index.ts       # manifest (nav item + view contribution)
+│       └── grid-page.tsx  # placeholder view (real UI lands in v0.2.0)
 ├── components/
 │   ├── app-shell.tsx      # sidebar frame (shadcn Sidebar primitives)
 │   └── ui/                # vendored shadcn/ui components
@@ -182,7 +228,7 @@ Deliberately absent: router, state-management library, API abstraction
 layer (CopilotKit *is* the abstraction), test scaffolding. The component
 library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 
-## 6. Error Handling (MVP level)
+## 7. Error Handling (MVP level)
 
 - **Runtime unreachable / wrong endpoint**: the chat surface shows the
   connection error surfaced by the SDK; README documents checking
@@ -193,7 +239,7 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 - No retry queues, offline handling, or error boundaries beyond the SDK
   defaults in this milestone.
 
-## 7. Boundaries (what this app must never grow into)
+## 8. Boundaries (what this app must never grow into)
 
 - No business logic, agent logic, or prompt construction — that is the
   Runtime's job.
@@ -202,11 +248,12 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
   only contract.
 - Durable user data beyond `localStorage` thread id belongs to the Runtime.
 
-## 8. Evolution Path (later milestones)
+## 9. Evolution Path (later milestones)
 
 | Milestone theme | Architectural impact |
 |-----------------|----------------------|
-| ETF Grid view (v0.2.0) | First consumer of the shell's plugin registration (`src/nav.ts`) |
+| ETF Grid view (v0.2.0) | Fills the blank `etf-grid` plugin page with the real grid UI + API client (introduces `PluginContext` if endpoint injection is needed) |
+| ETF Grid chat cards (v0.2.1) | New `toolCards` extension point on the plugin contract — zero changes to existing plugins |
 | Custom dispatch/tool cards | Custom renderer registrations on the existing shadcn/ui base |
 | HITL confirmations | SDK's HITL hooks + confirmation card components |
 | Thread list / management | Real entries in the shell's 最近 group + thread metadata from the Runtime; may add a router |
@@ -214,11 +261,12 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 | Remote/cloud deployment | Only `VITE_AGENT_ENDPOINT` changes (Runtime ADR 0005) |
 | Tests | Introduce vitest when component logic outgrows manual walkthroughs |
 
-## 9. References
+## 10. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — current milestone plan
-- [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — previous milestone plan
+- [`docs/plan/v0.1.2-plugin-framework.md`](plan/v0.1.2-plugin-framework.md) — current milestone plan
+- [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — previous milestone plan
+- [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — MVP milestone plan
 - Runtime architecture: `../../Spectres-Runtime/docs/architecture.md`
 - Runtime ADR 0004 (AG-UI visibility), ADR 0005 (deployment topology): `../../Spectres-Runtime/docs/adr/`
 - CopilotKit — connect AG-UI agents: https://docs.copilotkit.ai/backend/ag-ui

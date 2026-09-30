@@ -1,15 +1,21 @@
 import type { LucideIcon } from "lucide-react";
-import { ChartColumn, Clock, MessageSquare, Puzzle, SquarePen } from "lucide-react";
+import { Clock, MessageSquare, Puzzle, SquarePen } from "lucide-react";
 
 /**
  * Navigation data model for the app shell.
  *
- * Views and plugin entries are registered here as plain data; the shell
- * renders them generically. Adding a future view (e.g. v0.2.0's ETF Grid)
- * is a one-record change: extend ViewId, add the entry, flip `disabled`.
+ * Core entries (upper nav, the Plugins group header, recent conversations)
+ * are registered here as plain data; the shell renders them generically.
+ * Plugin entries are NOT registered here — they come from the plugin
+ * registry (`src/plugins/`), discovered at build time.
  */
 
-export type ViewId = "chat";
+/**
+ * Core views are the `"chat"` literal; plugin views widen the type to any
+ * string (ids come from plugin manifests). The `string & {}` keeps `"chat"`
+ * discoverable in autocomplete.
+ */
+export type ViewId = "chat" | (string & {});
 
 export type NavAction =
   | { type: "reset-thread" }
@@ -29,7 +35,6 @@ export interface PluginGroup {
   id: string;
   label: string;
   icon: LucideIcon;
-  items: NavItem[];
 }
 
 export interface RecentConversation {
@@ -56,19 +61,11 @@ export const primaryNav: NavItem[] = [
   },
 ];
 
+/** Group header only; the child entries come from the plugin registry. */
 export const pluginGroup: PluginGroup = {
   id: "plugins",
   label: "插件",
   icon: Puzzle,
-  items: [
-    {
-      id: "etf-grid",
-      label: "ETF 网格",
-      icon: ChartColumn,
-      disabled: true,
-      badge: "v0.2.0",
-    },
-  ],
 };
 
 /** Only the current conversation is real; history arrives with thread management. */
