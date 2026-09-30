@@ -10,7 +10,7 @@ protocol, with streaming replies and visible tool calls.
 - [Spectres Runtime](../Spectres-Runtime) running on `localhost:7777` with:
   - the AG-UI endpoint exposed (`POST /agui`)
   - `CORS_ALLOWED_ORIGINS` including this app's origin
-    (dev default: `http://localhost:5173`)
+    (dev default: `http://localhost:3000`)
   - a configured LLM provider (see the Runtime README)
 
 ## Configuration
@@ -36,9 +36,9 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173 and chat. Reloading the page continues the same
+Open http://localhost:3000 and chat. Reloading the page continues the same
 conversation (the AG-UI `thread_id` is persisted in `localStorage` and the
-Runtime keeps the session); **New conversation** starts a fresh thread.
+Runtime keeps the session); **新聊天** in the sidebar starts a fresh thread.
 
 ## One-PC MVP run (static build)
 
@@ -70,12 +70,20 @@ npm run typecheck   # tsc -b
 ```text
 src/
 ├── main.tsx            # entry; mounts <App/>, imports styles
-├── App.tsx             # shell: layout, branding, New conversation button
-├── agent.ts            # CopilotKit provider setup + HttpAgent wiring
+├── app.tsx             # view state, CopilotKit provider, AppShell wiring
+├── nav.ts              # typed sidebar registry (nav, plugins, recent)
+├── ag-ui.ts            # HttpAgent wiring + endpoint resolution
 ├── thread.ts           # thread_id localStorage helpers
+├── components/
+│   ├── app-shell.tsx   # sidebar frame (shadcn Sidebar primitives)
+│   └── ui/             # vendored shadcn/ui components
+├── hooks/
+│   └── use-mobile.ts   # vendored shadcn hook (sidebar)
+├── lib/
+│   └── utils.ts        # cn() class-merge helper
 ├── pages/
-│   └── ChatPage.tsx    # the only page: prebuilt chat + tool renderer
-└── index.css           # Tailwind entry
+│   └── chat-page.tsx   # chat view: prebuilt chat + tool renderer
+└── index.css           # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
 See [`docs/frontend-architecture.md`](docs/frontend-architecture.md) for the

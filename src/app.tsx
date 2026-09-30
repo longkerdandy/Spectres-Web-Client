@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { CopilotKit } from "@copilotkit/react-core/v2";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/app-shell";
-import { AGENT_ID, createAgent } from "./agent";
+import { AGENT_ID, createAgent } from "./ag-ui";
 import { loadThreadId, resetThreadId } from "./thread";
 import type { ViewId } from "./nav";
 import ChatPage from "./pages/chat-page";

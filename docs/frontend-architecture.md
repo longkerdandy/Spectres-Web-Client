@@ -58,7 +58,7 @@ the only place the Runtime is reachable.
 Note: `@ag-ui/client` is a **separate MIT package** maintained by the
 `ag-ui-protocol` organization — not part of the CopilotKit SDK. It is the
 protocol implementation and an independently versioned package. The app
-imports it directly in `agent.ts` to construct the `HttpAgent` that the
+imports it directly in `ag-ui.ts` to construct the `HttpAgent` that the
 CopilotKit provider self-manages (direct connection, no runtime).
 
 ### 2.5 CopilotKit React SDK (MIT)
@@ -164,7 +164,7 @@ src/
 ├── main.tsx               # entry; mounts <App/>, imports styles
 ├── app.tsx                # view state, CopilotKit provider, AppShell wiring
 ├── nav.ts                 # typed sidebar registry (nav, plugins, recent)
-├── agent.ts               # HttpAgent wiring + endpoint resolution
+├── ag-ui.ts               # HttpAgent wiring + endpoint resolution
 ├── thread.ts              # thread_id localStorage helpers
 ├── components/
 │   ├── app-shell.tsx      # sidebar frame (shadcn Sidebar primitives)
