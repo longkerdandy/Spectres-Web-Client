@@ -5,7 +5,7 @@ import { AppShell } from "@/components/app-shell";
 import { AGENT_ID, createAgent } from "./agent";
 import { loadThreadId, resetThreadId } from "./thread";
 import type { ViewId } from "./nav";
-import ChatPage from "./pages/ChatPage";
+import ChatPage from "./pages/chat-page";
 
 export default function App() {
   const [threadId, setThreadId] = useState(loadThreadId);

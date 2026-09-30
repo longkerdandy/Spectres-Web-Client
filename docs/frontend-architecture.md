@@ -118,7 +118,7 @@ The thinnest layer — everything above is library code:
   Adding a view or a Runtime-extension entry (e.g. v0.2.0's ETF Grid) is
   a one-record change: extend `ViewId`, add the record, clear `disabled`.
 - **View state**: no router; the active view (`ViewId`) is local React
-  state in `App.tsx`. Only `chat` exists so far.
+  state in `app.tsx`. Only `chat` exists so far.
 - **ChatPage**: composes the prebuilt chat component and enables the tool
   renderer; rendered inside the shell's main area, behavior unchanged.
 - **`thread.ts`**: `thread_id` helpers — read from `localStorage` on load
@@ -162,7 +162,7 @@ branches anywhere in the code.
 ```text
 src/
 ├── main.tsx               # entry; mounts <App/>, imports styles
-├── App.tsx                # view state, CopilotKit provider, AppShell wiring
+├── app.tsx                # view state, CopilotKit provider, AppShell wiring
 ├── nav.ts                 # typed sidebar registry (nav, plugins, recent)
 ├── agent.ts               # HttpAgent wiring + endpoint resolution
 ├── thread.ts              # thread_id localStorage helpers
@@ -174,7 +174,7 @@ src/
 ├── lib/
 │   └── utils.ts           # cn() class-merge helper
 ├── pages/
-│   └── ChatPage.tsx       # chat view: prebuilt chat + tool renderer
+│   └── chat-page.tsx      # chat view: prebuilt chat + tool renderer
 └── index.css              # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
