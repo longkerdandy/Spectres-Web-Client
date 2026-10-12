@@ -53,11 +53,13 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
-### 3.2 Current Milestone (v0.1.4 — AG-UI 1.0 & CopilotKit 1.77 Upgrade, planned)
+### 3.2 Current Milestone (v0.2.0 — ETF Grid Frontend, planned)
 
-Paired upgrade of `@ag-ui/client` (0.0.59 → 1.0.2, exact pin) and `@copilotkit/react-core` (1.73.0 → 1.77.2) onto the AG-UI 1.0 packages, with the release-note-driven UI/config adjustments (Intelligence indicator opt-out, inspector verification, thread-replay behavior) and a version-pinning convention so the pair never splits again. Plan: [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md). Next: v0.2.0 fills the ETF Grid plugin page ([`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md)), then v0.2.1 adds in-chat tool cards ([`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md)).
+Fills the blank ETF Grid plugin page from v0.1.2 with the real grid UI backed by the Runtime's `etf_grid` extension. Plan: [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md). Next: v0.2.1 adds in-chat tool cards ([`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md)).
 
 ### 3.2.1 Completed Milestones
+
+- **v0.1.4 — AG-UI 1.0 & CopilotKit 1.77 Upgrade**: paired upgrade onto the AG-UI 1.0 packages (`@ag-ui/client` pinned exactly to CopilotKit's pin, currently 1.0.2; `@copilotkit/react-core` ^1.77.2), Intelligence indicator opted out, paired-upgrade convention documented for Dependabot solo bumps. Completed per [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md).
 
 - **v0.1.3 — Internationalization**: react-i18next with namespace-per-plugin — core `common` namespace plus plugin manifests contributing their own locale bundles via `defineLocales`, all registered synchronously at init; UI ships English only, additional locales are data-only follow-ups. Completed per [`docs/plan/v0.1.3-i18n.md`](docs/plan/v0.1.3-i18n.md).
 
