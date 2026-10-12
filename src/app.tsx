@@ -26,6 +26,7 @@ export default function App() {
           key={threadId}
           agentId={AGENT_ID}
           selfManagedAgents={{ [AGENT_ID]: agent }}
+          showIntelligenceIndicator={false}
         >
           {/* Kept mounted while plugin views are shown so the conversation
               state survives view switches. */}

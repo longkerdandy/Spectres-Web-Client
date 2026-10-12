@@ -61,6 +61,28 @@ protocol implementation and an independently versioned package. The app
 imports it directly in `ag-ui.ts` to construct the `HttpAgent` that the
 CopilotKit provider self-manages (direct connection, no runtime).
 
+**Version pinning convention** (since v0.1.4): `@ag-ui/client` is pinned
+to the **exact** version that `@copilotkit/react-core` depends on
+(currently `1.0.2`, pinned by CopilotKit 1.77/1.78), with no semver
+range. `AbstractAgent` declares private fields, so TypeScript
+assignability is nominal — a `HttpAgent` only satisfies CopilotKit's
+`selfManagedAgents` slot when both packages resolve to the *same*
+installed copy. A caret range (or a Dependabot bump of either side alone)
+can install two copies and break the build. The two packages are always
+bumped together: when Dependabot opens a solo `@ag-ui/client` (or
+CopilotKit) PR that breaks the pairing, close it and do a paired manual
+upgrade instead. Verify after every CopilotKit upgrade with
+`npm ls @ag-ui/client` (must show one deduped copy).
+
+**AG-UI 1.0 behavior notes**: the 1.0 client validates the event stream —
+unknown event types are dropped and unknown properties stripped with
+warnings, malformed values fail the run — and stamps every request with
+`protocolVersion: "1.0"`. An always-on compatibility boundary translates
+legacy 0.x producer shapes (e.g. Agno's current `/agui` stream) with
+console warnings, so the Runtime does not need a matching upgrade;
+warnings about legacy `null` fields or transformed events are expected
+until Agno emits native 1.0 shapes.
+
 ### 2.5 CopilotKit React SDK (MIT)
 
 Sits on React and the AG-UI client. Three pieces used in v0.1.0:
@@ -69,6 +91,9 @@ Sits on React and the AG-UI client. Three pieces used in v0.1.0:
   agent connection and exposes agent state as React state. The agent
   instance is passed via `selfManagedAgents` — a direct AG-UI connection
   with no CopilotKit Runtime, no CopilotKit Cloud, no API keys.
+  `showIntelligenceIndicator={false}` opts out of the per-turn
+  Intelligence indicator (a CopilotKit Cloud feature; there is no
+  Intelligence backend to report on).
 - **prebuilt chat component** (`CopilotChat` from the same v2 surface):
   message list, streaming rendering, input. Its built-in English labels
   (placeholder, welcome message, disclaimer, toolbar tooltips) are fed
