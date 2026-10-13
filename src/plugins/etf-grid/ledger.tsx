@@ -23,7 +23,7 @@ import {
 import { getTrades } from "./api";
 import { RecordTradeDialog, type SymbolOption } from "./record-trade-dialog";
 import type { Page, Trade } from "./types";
-import { formatDate, formatInt, formatMoney, formatPrice } from "./format";
+import { formatInt, formatMoney, formatPrice } from "./format";
 
 const PAGE_SIZE = 20;
 const ALL_SYMBOLS = "__all__";
@@ -173,66 +173,87 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
             {t("ledger.empty")}
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("ledger.columns.date")}</TableHead>
-                <TableHead>{t("ledger.columns.symbol")}</TableHead>
-                <TableHead>{t("ledger.columns.side")}</TableHead>
-                <TableHead className="text-right">
-                  {t("ledger.columns.price")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("ledger.columns.quantity")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("ledger.columns.gross")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("ledger.columns.commission")}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t("ledger.columns.net")}
-                </TableHead>
-                <TableHead className="text-center">
-                  {t("ledger.columns.source")}
-                </TableHead>
-                <TableHead>{t("ledger.columns.note")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {page?.items.map((trade) => (
-                <TableRow key={trade.id}>
-                  <TableCell>{formatDate(trade.trade_date)}</TableCell>
-                  <TableCell>{trade.symbol}</TableCell>
-                  <TableCell>
-                    <SideBadge side={trade.side} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatPrice(trade.price)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatInt(trade.quantity)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatMoney(trade.gross_amount)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatMoney(trade.commission)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    {formatMoney(trade.net_amount)}
-                  </TableCell>
-                  <TableCell className="text-center text-xs text-muted-foreground">
-                    {trade.source}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {trade.note ?? "—"}
-                  </TableCell>
+          <div className="overflow-x-auto">
+            <Table className="min-w-480 table-fixed">
+              <colgroup>
+                <col className="w-56" />
+                <col className="w-56" />
+                <col className="w-40" />
+                <col className="w-48" />
+                <col className="w-48" />
+                <col className="w-56" />
+                <col className="w-48" />
+                <col className="w-56" />
+                <col className="w-40" />
+                <col />
+              </colgroup>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>{t("ledger.columns.date")}</TableHead>
+                  <TableHead>{t("ledger.columns.symbol")}</TableHead>
+                  <TableHead>{t("ledger.columns.side")}</TableHead>
+                  <TableHead className="text-right">
+                    {t("ledger.columns.price")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("ledger.columns.quantity")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("ledger.columns.gross")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("ledger.columns.commission")}
+                  </TableHead>
+                  <TableHead className="text-right">
+                    {t("ledger.columns.net")}
+                  </TableHead>
+                  <TableHead className="text-center">
+                    {t("ledger.columns.source")}
+                  </TableHead>
+                  <TableHead>{t("ledger.columns.note")}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {page?.items.map((trade) => (
+                  <TableRow key={trade.id}>
+                    <TableCell className="whitespace-nowrap">
+                      {trade.trade_date}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {trade.symbol}
+                    </TableCell>
+                    <TableCell>
+                      <SideBadge side={trade.side} />
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {formatPrice(trade.price)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {formatInt(trade.quantity)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {formatMoney(trade.gross_amount)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {formatMoney(trade.commission)}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap text-right">
+                      {formatMoney(trade.net_amount)}
+                    </TableCell>
+                    <TableCell className="text-center text-xs text-muted-foreground">
+                      {trade.source}
+                    </TableCell>
+                    <TableCell
+                      className="truncate text-xs text-muted-foreground"
+                      title={trade.note ?? undefined}
+                    >
+                      {trade.note ?? "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
         {page && page.total > 0 && (
           <div className="mt-2 flex items-center justify-between border-t pt-2 text-xs text-muted-foreground">

@@ -108,12 +108,16 @@ function StatusRow({ row }: { row: SymbolStatus }) {
   return (
     <TableRow>
       <TableCell>
-        <div className="font-medium">{row.name}</div>
+        <div className="font-medium whitespace-nowrap">{row.name}</div>
         <div className="text-xs text-muted-foreground">{row.symbol}</div>
       </TableCell>
-      <TableCell className="text-right">{formatInt(row.shares)}</TableCell>
-      <TableCell className="text-right">{formatPrice(row.avg_cost)}</TableCell>
-      <TableCell className="text-right">
+      <TableCell className="whitespace-nowrap text-right">
+        {formatInt(row.shares)}
+      </TableCell>
+      <TableCell className="whitespace-nowrap text-right">
+        {formatPrice(row.avg_cost)}
+      </TableCell>
+      <TableCell className="whitespace-nowrap text-right">
         {formatPrice(row.close)}
         {row.close_date && (
           <>
@@ -124,10 +128,10 @@ function StatusRow({ row }: { row: SymbolStatus }) {
           </>
         )}
       </TableCell>
-      <TableCell className="text-right">
+      <TableCell className="whitespace-nowrap text-right">
         {formatMoney(row.market_value)}
       </TableCell>
-      <TableCell className={`text-right ${realizedClass}`}>
+      <TableCell className={`whitespace-nowrap text-right ${realizedClass}`}>
         {formatSignedMoney(row.realized)}
       </TableCell>
       <TableCell className="text-center">
@@ -164,40 +168,53 @@ export function StatusTable({ status }: { status: SymbolStatus[] }) {
         </span>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{t("status.columns.symbol")}</TableHead>
-              <TableHead className="text-right">
-                {t("status.columns.shares")}
-              </TableHead>
-              <TableHead className="text-right">
-                {t("status.columns.avgCost")}
-              </TableHead>
-              <TableHead className="text-right">
-                {t("status.columns.close")}
-              </TableHead>
-              <TableHead className="text-right">
-                {t("status.columns.marketValue")}
-              </TableHead>
-              <TableHead className="text-right">
-                {t("status.columns.realized")}
-              </TableHead>
-              <TableHead className="text-center">
-                {t("status.columns.level")}
-              </TableHead>
-              <TableHead>{t("status.columns.signals")}</TableHead>
-              <TableHead className="text-center">
-                {t("status.columns.gate")}
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {status.map((row) => (
-              <StatusRow key={row.symbol} row={row} />
-            ))}
-          </TableBody>
-        </Table>
+        <div className="overflow-x-auto">
+          <Table className="min-w-448 table-fixed">
+            <colgroup>
+              <col className="w-64" />
+              <col className="w-40" />
+              <col className="w-40" />
+              <col className="w-48" />
+              <col className="w-48" />
+              <col className="w-48" />
+              <col className="w-32" />
+              <col />
+              <col className="w-40" />
+            </colgroup>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("status.columns.symbol")}</TableHead>
+                <TableHead className="text-right">
+                  {t("status.columns.shares")}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t("status.columns.avgCost")}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t("status.columns.close")}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t("status.columns.marketValue")}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t("status.columns.realized")}
+                </TableHead>
+                <TableHead className="text-center">
+                  {t("status.columns.level")}
+                </TableHead>
+                <TableHead>{t("status.columns.signals")}</TableHead>
+                <TableHead className="text-center">
+                  {t("status.columns.gate")}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {status.map((row) => (
+                <StatusRow key={row.symbol} row={row} />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   );
