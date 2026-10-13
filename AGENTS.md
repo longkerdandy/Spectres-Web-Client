@@ -2,7 +2,7 @@
 
 > This document is for coding agents working on the project. It defines the project background, the position of this subproject within the Spectres system, its scope, and its development conventions.
 >
-> Last updated: 2026-09-30
+> Last updated: 2026-10-13
 
 ---
 
@@ -53,11 +53,13 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
-### 3.2 Current Milestone (v0.2.0 — ETF Grid Frontend, planned)
+### 3.2 Current Milestone (v0.2.1 — ETF Grid Chat Tool Cards, planned)
 
-Fills the blank ETF Grid plugin page from v0.1.2 with the real grid UI backed by the Runtime's `etf_grid` extension. Plan: [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md). Next: v0.2.1 adds in-chat tool cards ([`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md)).
+Adds in-chat tool cards for the ETF Grid extension's four AG-UI tools. Plan: [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
 
 ### 3.2.1 Completed Milestones
+
+- **v0.2.0 — ETF Grid Frontend**: standalone grid status & trade ledger page backed by the Runtime's `etf_grid` REST API (base URL derived from `VITE_AGENT_ENDPOINT`) — status table with signal orders, gate state, and combined unrealized/realized P&L (Runtime v0.4.5); filterable, paginated ledger; record-trade modal with local preview, confirm step, and unified 422 rendering. Completed per [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md).
 
 - **v0.1.4 — AG-UI 1.0 & CopilotKit 1.77 Upgrade**: paired upgrade onto the AG-UI 1.0 packages (`@ag-ui/client` pinned exactly to CopilotKit's pin, currently 1.0.2; `@copilotkit/react-core` ^1.77.2), Intelligence indicator opted out, paired-upgrade convention documented for Dependabot solo bumps. Completed per [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md).
 
