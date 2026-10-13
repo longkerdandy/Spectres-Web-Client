@@ -30,13 +30,14 @@
     "title": "Grid status",
     "configHint": "Anchor: MA60 · Step: 5% (log)",
     "noSignal": "No signal yet — refresh or recompute",
+    "realizedLabel": "Realized {{value}}",
     "columns": {
       "symbol": "Symbol",
       "shares": "Shares",
       "avgCost": "Avg cost",
       "close": "Latest close",
       "marketValue": "Market value",
-      "realized": "Realized P&L",
+      "pnl": "P&L",
       "level": "Level",
       "signals": "Today's signals (buy / sell limits)",
       "gate": "Gate"

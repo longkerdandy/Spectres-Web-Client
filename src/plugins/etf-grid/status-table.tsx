@@ -19,6 +19,7 @@ import {
   formatPercent,
   formatPrice,
   formatSignedMoney,
+  formatSignedPercent,
 } from "./format";
 
 function OrderRow({ order }: { order: GridOrder }) {
@@ -102,9 +103,10 @@ function GateCell({ signal }: { signal: SignalSnapshot | null }) {
 
 function StatusRow({ row }: { row: SymbolStatus }) {
   const { t } = useTranslation("etf-grid");
-  const realizedClass = row.realized.startsWith("-")
-    ? "text-rose-600 dark:text-rose-400"
-    : "text-emerald-600 dark:text-emerald-400";
+  const unrealizedClass =
+    row.unrealized !== null && row.unrealized.startsWith("-")
+      ? "text-rose-600 dark:text-rose-400"
+      : "text-emerald-600 dark:text-emerald-400";
   return (
     <TableRow>
       <TableCell>
@@ -131,8 +133,20 @@ function StatusRow({ row }: { row: SymbolStatus }) {
       <TableCell className="whitespace-nowrap text-right">
         {formatMoney(row.market_value)}
       </TableCell>
-      <TableCell className={`whitespace-nowrap text-right ${realizedClass}`}>
-        {formatSignedMoney(row.realized)}
+      <TableCell className="whitespace-nowrap text-right">
+        {row.unrealized !== null ? (
+          <div className={unrealizedClass}>
+            {formatSignedMoney(row.unrealized)}{" "}
+            <span className="text-xs">
+              ({formatSignedPercent(row.unrealized_percent)})
+            </span>
+          </div>
+        ) : (
+          <div className="text-xs text-muted-foreground">{EM_DASH}</div>
+        )}
+        <div className="text-xs text-muted-foreground">
+          {t("status.realizedLabel", { value: formatSignedMoney(row.realized) })}
+        </div>
       </TableCell>
       <TableCell className="text-center">
         {row.signal ? (
@@ -197,7 +211,7 @@ export function StatusTable({ status }: { status: SymbolStatus[] }) {
                   {t("status.columns.marketValue")}
                 </TableHead>
                 <TableHead className="text-right">
-                  {t("status.columns.realized")}
+                  {t("status.columns.pnl")}
                 </TableHead>
                 <TableHead className="text-center">
                   {t("status.columns.level")}

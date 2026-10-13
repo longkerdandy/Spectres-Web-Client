@@ -44,6 +44,14 @@ export function formatPercent(fraction: string | null): string {
   return `${Math.round(Number(fraction) * 100)}%`;
 }
 
+/** Signed percent with one decimal: "0.1234" → "+12.3%", "-0.05" → "-5.0%"; null → "—". */
+export function formatSignedPercent(fraction: string | null): string {
+  if (fraction === null) return EM_DASH;
+  const percent = Number(fraction) * 100;
+  const formatted = `${Math.abs(percent).toFixed(1)}%`;
+  return percent < 0 ? `-${formatted}` : `+${formatted}`;
+}
+
 /** ISO date "2026-09-26" → "09-26". */
 export function formatDate(iso: string | null): string {
   if (!iso) return EM_DASH;

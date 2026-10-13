@@ -1,6 +1,6 @@
 /**
  * TypeScript mirror of the Runtime's etf_grid REST contract
- * (`/api/v1/extensions/etf-grid`, Runtime v0.4.4). All Decimal values
+ * (`/api/v1/extensions/etf-grid`, Runtime v0.4.5). All Decimal values
  * arrive as strings; dates are ISO strings. Nullable fields are explicit.
  */
 
@@ -45,6 +45,10 @@ export interface SymbolStatus {
   close: string | null;
   close_date: string | null;
   market_value: string | null;
+  /** close × shares − avg_cost × shares; null without position, cost, or close. */
+  unrealized: string | null;
+  /** Fraction of cost basis as a string ("0.1234" = +12.34%); null with `unrealized`. */
+  unrealized_percent: string | null;
   signal: SignalSnapshot | null;
 }
 
