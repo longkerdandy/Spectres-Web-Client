@@ -7,14 +7,14 @@
     "description": "Live status and ledger of the grid trading strategy."
   },
   "actions": {
-    "refresh": "Refresh data",
+    "refresh": "Refresh Data",
     "refreshing": "Refreshing…",
-    "recompute": "Recompute signals",
+    "recompute": "Recompute",
     "recomputing": "Recomputing…"
   },
   "notice": {
-    "syncSuccess": "Market data synced",
-    "syncPartial": "Market data synced (partial failure)",
+    "refreshSuccess": "Data refreshed",
+    "refreshPartial": "Data refreshed (partial failure)",
     "syncFailed": "Market data sync failed",
     "candles": "Candles: {{detail}}",
     "candlesFailed": "Candles: failed",
@@ -23,7 +23,8 @@
     "computeDone": "Signals recomputed for {{count}} symbols",
     "computeOk": "All configured symbols computed.",
     "computeSkipped": "Skipped — {{detail}}",
-    "computeFailed": "Signal recompute failed"
+    "computeFailed": "Signal recompute failed",
+    "computeFailedReason": "Signal recompute failed: {{message}}"
   },
   "status": {
     "title": "Grid status",
