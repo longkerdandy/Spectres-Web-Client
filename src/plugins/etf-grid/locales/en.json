@@ -65,8 +65,10 @@
   "ledger": {
     "title": "Trade ledger",
     "allSymbols": "All symbols",
+    "startDate": "Start date",
+    "endDate": "End date",
     "query": "Query",
-    "record": "Record trade",
+    "record": "Record Trade",
     "loadFailed": "Failed to load trades: {{message}}",
     "empty": "No trades yet — record the first one.",
     "total": "{{total}} trades · newest first",
@@ -118,5 +120,8 @@
     "retry": "Retry",
     "emptyTitle": "No symbols configured",
     "emptyDescription": "The Runtime returned no portfolio symbols. Check the etf_grid configuration on the Runtime side."
+  },
+  "datePicker": {
+    "placeholder": "Pick a date"
   }
 }

@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ApiError, createTrade } from "./api";
+import { DatePicker } from "./date-picker";
 import type { Side, ValidationErrorItem } from "./types";
 import { addDecimal, isPositiveDecimal, mulDecimal, mulInt } from "./money";
 
@@ -139,15 +140,14 @@ export function RecordTradeDialog({
           </label>
 
           <div className="grid grid-cols-2 gap-3">
-            <label className="block">
+            <div className="block">
               <span className={fieldLabel}>{t("record.date")}</span>
-              <Input
-                type="date"
+              <DatePicker
                 value={tradeDate}
-                onChange={(event) => setTradeDate(event.target.value)}
-                className={fieldInput}
+                onChange={setTradeDate}
+                className={`${fieldInput} w-full`}
               />
-            </label>
+            </div>
             <label className="block">
               <span className={fieldLabel}>{t("record.side")}</span>
               <Select

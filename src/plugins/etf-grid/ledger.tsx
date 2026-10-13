@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getTrades } from "./api";
+import { DatePicker } from "./date-picker";
 import { RecordTradeDialog, type SymbolOption } from "./record-trade-dialog";
 import type { Page, Trade } from "./types";
 import { formatInt, formatMoney, formatPrice } from "./format";
@@ -114,7 +115,7 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
 
   return (
     <Card>
-      <CardHeader className="flex-row items-center justify-between flex-wrap gap-2">
+      <CardHeader className="flex-row items-center flex-wrap gap-2">
         <CardTitle>{t("ledger.title")}</CardTitle>
         <div className="flex items-center gap-2">
           <Select value={symbol} onValueChange={setSymbol}>
@@ -132,30 +133,33 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
               ))}
             </SelectContent>
           </Select>
-          <Input
-            type="date"
+          <DatePicker
             value={start}
-            onChange={(event) => setStart(event.target.value)}
+            onChange={setStart}
+            placeholder={t("ledger.startDate")}
             className="w-36"
           />
           <span className="text-muted-foreground">~</span>
-          <Input
-            type="date"
+          <DatePicker
             value={end}
-            onChange={(event) => setEnd(event.target.value)}
+            onChange={setEnd}
+            placeholder={t("ledger.endDate")}
             className="w-36"
           />
           <Button variant="outline" size="sm" onClick={applyFilters}>
+            <Search />
             {t("ledger.query")}
           </Button>
-          <Button
-            size="sm"
-            onClick={() => setDialogOpen(true)}
-            disabled={symbols.length === 0}
-          >
-            {t("ledger.record")}
-          </Button>
         </div>
+        <Button
+          size="sm"
+          className="ml-auto"
+          onClick={() => setDialogOpen(true)}
+          disabled={symbols.length === 0}
+        >
+          <Plus />
+          {t("ledger.record")}
+        </Button>
       </CardHeader>
       <CardContent>
         {loading && !page ? (
