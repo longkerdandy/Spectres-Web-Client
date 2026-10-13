@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-09-30 · Covers: v0.1.3 (Internationalization)
+> Last updated: 2026-10-12 · Covers: v0.2.0 (ETF Grid Frontend)
 
 ---
 
@@ -192,12 +192,18 @@ hand-registers a Runtime-extension entry again.
 - **Deliberately absent**: runtime loading / Module Federation (single
   user, single repo — plugins ship with the app), lazy loading (eager
   glob; revisit when bundle size forces it), `PluginContext` injection
-  (lands with v0.2.0's API client, YAGNI for blank pages), npm-distributed
+  (v0.2.0's API client derives its base URL from `VITE_AGENT_ENDPOINT`
+  directly, so no shared context was needed after all), npm-distributed
   third-party plugins.
 
-The first plugin, `etf-grid`, ships a blank placeholder page purely to
-validate the chain (discovery → nav → view switch); v0.2.0 fills it with
-the real ETF Grid UI.
+The first plugin, `etf-grid`, is the proving ground: its page talks to the
+Runtime extension's REST API (grid status, sync/recompute actions, trade
+ledger, manual trade recording). Everything lives inside
+`src/plugins/etf-grid/`: a typed `fetch` client (`api.ts`, base URL
+derived from `VITE_AGENT_ENDPOINT`; contract types in `types.ts`), the
+page components, BigInt-backed decimal helpers for the local amount
+preview (`money.ts` — no float math on money), display formatting
+(`format.ts`), and its `locales/` bundles.
 
 ## 4. Internationalization (i18n)
 
@@ -257,7 +263,8 @@ complete, so a new language is a data-only addition.
 | Internationalization | react-i18next; `common` + per-plugin namespaces, all bundles registered synchronously at init | All UI copy |
 | Navigation | Core registry in `src/nav.ts` + plugin registry in `src/plugins/`; active view is local state (no router) | App shell |
 | Thread persistence | `localStorage` via `thread.ts` | App code → agent connection |
-| Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring |
+| Extension REST APIs | Plugin-local typed `fetch` clients; base URL derived from `VITE_AGENT_ENDPOINT` | Plugin pages → Runtime extensions |
+| Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring + extension API base derivation |
 
 One configuration mechanism for all environments; no environment-detection
 branches anywhere in the code.
@@ -278,7 +285,7 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 7. Source Layout (v0.1.3)
+## 7. Source Layout (v0.2.0)
 
 ```text
 src/
@@ -295,9 +302,16 @@ src/
 ├── plugins/
 │   ├── types.ts           # plugin contract: definePlugin/defineLocales + extension points
 │   ├── index.ts           # build-time discovery (import.meta.glob) + aggregation
-│   └── etf-grid/          # first plugin — blank page validating the framework
+│   └── etf-grid/          # first plugin — grid status & trade ledger page
 │       ├── index.ts       # manifest (nav item + view + locales contribution)
-│       ├── grid-page.tsx  # placeholder view (real UI lands in v0.2.0)
+│       ├── api.ts         # typed fetch client; base URL from VITE_AGENT_ENDPOINT
+│       ├── types.ts       # mirror of the Runtime etf_grid REST contract
+│       ├── money.ts       # BigInt decimal helpers (record-trade preview)
+│       ├── format.ts      # money/percent/date display formatting
+│       ├── grid-page.tsx  # page composition: actions, notices, sections
+│       ├── status-table.tsx   # per-symbol grid status + signal orders
+│       ├── ledger.tsx         # trade ledger: filters + pagination
+│       ├── record-trade-dialog.tsx  # record trade: preview + confirm + 422s
 │       └── locales/
 │           └── en.json    # plugin `etf-grid` namespace (English)
 ├── components/
@@ -341,7 +355,6 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 | Milestone theme | Architectural impact |
 |-----------------|----------------------|
 | Additional locales (e.g. zh-CN) | Data-only: new `*.json` files + `SUPPORTED_LANGUAGES`/`coreResources` entries; the language switcher UI arrives with the second locale |
-| ETF Grid view (v0.2.0) | Fills the blank `etf-grid` plugin page with the real grid UI + API client (introduces `PluginContext` if endpoint injection is needed) |
 | ETF Grid chat cards (v0.2.1) | New `toolCards` extension point on the plugin contract — zero changes to existing plugins |
 | Custom dispatch/tool cards | Custom renderer registrations on the existing shadcn/ui base |
 | HITL confirmations | SDK's HITL hooks + confirmation card components |
@@ -353,7 +366,9 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 ## 11. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.1.3-i18n.md`](plan/v0.1.3-i18n.md) — current milestone plan
+- [`docs/plan/v0.2.0-etf-grid-frontend.md`](plan/v0.2.0-etf-grid-frontend.md) — current milestone plan
+- [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](plan/v0.1.4-ag-ui-copilotkit-upgrade.md) — AG-UI 1.0 / CopilotKit upgrade milestone plan
+- [`docs/plan/v0.1.3-i18n.md`](plan/v0.1.3-i18n.md) — i18n milestone plan
 - [`docs/plan/v0.1.2-plugin-framework.md`](plan/v0.1.2-plugin-framework.md) — plugin framework milestone plan
 - [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — app shell milestone plan
 - [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — MVP milestone plan

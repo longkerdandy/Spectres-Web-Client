@@ -4,9 +4,119 @@
   },
   "page": {
     "title": "ETF Grid",
-    "description": "Live status and ledger of the grid trading strategy.",
-    "underConstruction": "Under construction",
-    "underConstructionDescription": "This plugin page will provide the full grid status and ledger in v0.2.0.",
-    "frameworkFooter": "ETF Grid plugin · v0.1.2 framework validation"
+    "description": "Live status and ledger of the grid trading strategy."
+  },
+  "actions": {
+    "refresh": "Refresh data",
+    "refreshing": "Refreshing…",
+    "recompute": "Recompute signals",
+    "recomputing": "Recomputing…"
+  },
+  "notice": {
+    "syncSuccess": "Market data synced",
+    "syncPartial": "Market data synced (partial failure)",
+    "syncFailed": "Market data sync failed",
+    "candles": "Candles: {{detail}}",
+    "candlesFailed": "Candles: failed",
+    "valuation": "Valuation: +{{count}} rows",
+    "valuationFailed": "Valuation: failed",
+    "computeDone": "Signals recomputed for {{count}} symbols",
+    "computeOk": "All configured symbols computed.",
+    "computeSkipped": "Skipped — {{detail}}",
+    "computeFailed": "Signal recompute failed"
+  },
+  "status": {
+    "title": "Grid status",
+    "configHint": "Anchor: MA60 · Step: 5% (log)",
+    "noSignal": "No signal yet — refresh or recompute",
+    "columns": {
+      "symbol": "Symbol",
+      "shares": "Shares",
+      "avgCost": "Avg cost",
+      "close": "Latest close",
+      "marketValue": "Market value",
+      "realized": "Realized P&L",
+      "level": "Level",
+      "signals": "Today's signals (buy / sell limits)",
+      "gate": "Gate"
+    },
+    "order": {
+      "buy": "Buy ≤ {{price}} × {{grids}}",
+      "sell": "Sell ≥ {{price}} × {{grids}}",
+      "triggered": "Triggered",
+      "pending": "Pending",
+      "noPendingBuy": "Buy — (no pending order)",
+      "noPendingSell": "Sell — (no position)",
+      "note": {
+        "cost_protection": "cost protection",
+        "gate_closed": "gate closed"
+      }
+    },
+    "blockReason": {
+      "gate_closed": "gate_closed: dividend-yield percentile {{percentile}} below threshold",
+      "max_grids_reached": "max_grids_reached: bottom level, no further buys",
+      "cost_protection": "cost_protection: sells capped at cost",
+      "no_position": "no_position: no holdings to sell"
+    },
+    "gate": {
+      "closed": "Closed · {{percentile}}"
+    }
+  },
+  "ledger": {
+    "title": "Trade ledger",
+    "allSymbols": "All symbols",
+    "query": "Query",
+    "record": "Record trade",
+    "loadFailed": "Failed to load trades: {{message}}",
+    "empty": "No trades yet — record the first one.",
+    "total": "{{total}} trades · newest first",
+    "page": "Page {{page}} / {{pages}}",
+    "prev": "Previous",
+    "next": "Next",
+    "side": {
+      "buy": "Buy",
+      "sell": "Sell"
+    },
+    "columns": {
+      "date": "Date",
+      "symbol": "Symbol",
+      "side": "Side",
+      "price": "Price",
+      "quantity": "Quantity",
+      "gross": "Gross",
+      "commission": "Commission",
+      "net": "Net",
+      "source": "Source",
+      "note": "Note"
+    }
+  },
+  "record": {
+    "title": "Record a trade",
+    "symbol": "Symbol",
+    "date": "Date",
+    "side": "Side",
+    "buy": "Buy",
+    "sell": "Sell",
+    "price": "Price",
+    "quantity": "Quantity (shares)",
+    "commissionRate": "Commission rate",
+    "note": "Note (optional)",
+    "notePlaceholder": "e.g. bought 2 grids per plan",
+    "preview": "Local estimate (verify before submitting)",
+    "gross": "Gross",
+    "commission": "Commission",
+    "net": "Net",
+    "hint": "A mistaken entry can be offset with a reversing trade.",
+    "cancel": "Cancel",
+    "continue": "Continue",
+    "back": "Back",
+    "confirm": "Confirm & record",
+    "submitting": "Recording…"
+  },
+  "errors": {
+    "loadFailed": "Failed to load grid status",
+    "retry": "Retry",
+    "emptyTitle": "No symbols configured",
+    "emptyDescription": "The Runtime returned no portfolio symbols. Check the etf_grid configuration on the Runtime side."
   }
 }
