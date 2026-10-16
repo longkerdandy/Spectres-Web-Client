@@ -4,7 +4,7 @@ import { Calculator, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { computeSignals, getStatus, syncMarketData } from "./api";
+import { computeSignals, errorMessage, getStatus, syncMarketData } from "./api";
 import { Ledger } from "./ledger";
 import { computeNotice, syncNotice } from "./notice";
 import { StatusTable } from "./status-table";
@@ -21,10 +21,6 @@ interface Notice {
   variant: "default" | "destructive";
   title: string;
   description: string;
-}
-
-function errorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
 }
 
 export default function GridPage() {

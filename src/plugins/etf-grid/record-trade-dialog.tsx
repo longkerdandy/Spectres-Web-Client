@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ApiError, createTrade } from "./api";
+import { ApiError, createTrade, errorMessage } from "./api";
 import { DatePicker } from "./date-picker";
 import type { Side, ValidationErrorItem } from "./types";
 import { addDecimal, isPositiveDecimal, mulDecimal, mulInt } from "./money";
@@ -104,7 +104,7 @@ export function RecordTradeDialog({
       if (error instanceof ApiError && error.validation) {
         setErrors(error.validation);
       } else {
-        setFormError(error instanceof Error ? error.message : String(error));
+        setFormError(errorMessage(error));
       }
       setConfirming(false);
     } finally {

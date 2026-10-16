@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getTrades } from "./api";
+import { errorMessage, getTrades } from "./api";
 import { DatePicker } from "./date-picker";
 import { RecordTradeDialog, type SymbolOption } from "./record-trade-dialog";
 import type { Page, Trade } from "./types";
@@ -72,7 +72,7 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
         setPage(result);
         setError(null);
       } catch (loadError) {
-        setError(loadError instanceof Error ? loadError.message : String(loadError));
+        setError(errorMessage(loadError));
       } finally {
         setLoading(false);
       }

@@ -32,6 +32,11 @@ export class ApiError extends Error {
   }
 }
 
+/** Display string for an unknown thrown value (Error message or coercion). */
+export function errorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
