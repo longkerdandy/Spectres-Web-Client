@@ -69,9 +69,6 @@ export function AppShell({
         onResetThread();
         onSelectView("chat");
         break;
-      case "open-view":
-        onSelectView(action.view);
-        break;
     }
   }
 

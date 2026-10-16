@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { parseToolResult, type ToolError } from "@/lib/tool-result";
 
 /** Status of an AG-UI tool call as delivered by CopilotKit v2 render props. */
-export type ToolCallStatus = "inProgress" | "executing" | "complete";
+type ToolCallStatus = "inProgress" | "executing" | "complete";
 
 /** Props every tool card accepts, forwarded from `useRenderTool` render props. */
 export interface ToolCardProps {

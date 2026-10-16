@@ -17,9 +17,7 @@ import { Clock, MessageSquare, Puzzle, SquarePen } from "lucide-react";
  */
 export type ViewId = "chat" | (string & {});
 
-export type NavAction =
-  | { type: "reset-thread" }
-  | { type: "open-view"; view: ViewId };
+export type NavAction = { type: "reset-thread" };
 
 export interface NavItem {
   id: string;

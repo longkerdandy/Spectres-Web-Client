@@ -1,8 +1,6 @@
 import type { ComponentType } from "react";
 import type { PluginDefinition, PluginNavItem, PluginView } from "./types";
 
-export type { PluginNavItem, PluginView } from "./types";
-
 /**
  * A plugin nav item as handed to the shell: the manifest entry plus the
  * translation namespace of the owning plugin (its manifest `id`), so the

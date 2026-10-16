@@ -20,8 +20,8 @@ import commonEn from "./locales/en/common.json";
  * their own `locales/<lang>.json`.
  */
 
-export const SUPPORTED_LANGUAGES = ["en"] as const;
-export const DEFAULT_LANGUAGE: string = SUPPORTED_LANGUAGES[0];
+const SUPPORTED_LANGUAGES = ["en"] as const;
+const DEFAULT_LANGUAGE: string = SUPPORTED_LANGUAGES[0];
 
 const STORAGE_KEY = "spectres:lang";
 
@@ -80,5 +80,3 @@ function applyLanguage(resolved: string) {
 
 applyLanguage(language);
 i18n.on("languageChanged", applyLanguage);
-
-export default i18n;
