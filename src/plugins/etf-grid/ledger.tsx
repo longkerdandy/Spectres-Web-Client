@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -49,35 +49,45 @@ export function SideBadge({ side }: { side: Trade["side"] }) {
   );
 }
 
+interface TradeRequest {
+  symbol: string;
+  start: string;
+  end: string;
+  offset: number;
+}
+
 export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
   const { t } = useTranslation("etf-grid");
   const [symbol, setSymbol] = useState(ALL_SYMBOLS);
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
-  const [query, setQuery] = useState({ symbol: "", start: "", end: "" });
-  const [offset, setOffset] = useState(0);
+  // The submitted query + offset: the single source of truth for what is
+  // being fetched. Every change re-runs the loading effect below.
+  const [request, setRequest] = useState<TradeRequest>({
+    symbol: "",
+    start: "",
+    end: "",
+    offset: 0,
+  });
   const [page, setPage] = useState<Page<Trade> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Latest-wins: starting a new load aborts the previous in-flight one,
-  // and only the latest request may commit state or end the loading flag.
-  const controllerRef = useRef<AbortController | null>(null);
-
-  const load = useCallback(
-    async (filters: { symbol: string; start: string; end: string }, off: number) => {
-      controllerRef.current?.abort();
-      const controller = new AbortController();
-      controllerRef.current = controller;
+  // Fetch on mount and whenever `request` changes; the cleanup aborts the
+  // previous in-flight fetch, so only the latest request commits state.
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    void (async () => {
       try {
         const result = await getTrades(
           {
-            symbol: filters.symbol || undefined,
-            start: filters.start || undefined,
-            end: filters.end || undefined,
+            symbol: request.symbol || undefined,
+            start: request.start || undefined,
+            end: request.end || undefined,
             limit: PAGE_SIZE,
-            offset: off,
+            offset: request.offset,
           },
           controller.signal,
         );
@@ -88,48 +98,33 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
         if (controller.signal.aborted) return;
         setError(errorMessage(loadError));
       } finally {
-        if (controllerRef.current === controller) setLoading(false);
+        if (!controller.signal.aborted) setLoading(false);
       }
-    },
-    [],
-  );
-
-  // Initial page load; subsequent loads are driven by the event handlers
-  // below (filters, pagination, recorded trade).
-  useEffect(() => {
-    void load({ symbol: "", start: "", end: "" }, 0);
-    return () => {
-      controllerRef.current?.abort();
-      controllerRef.current = null;
-    };
-  }, [load]);
+    })();
+    return () => controller.abort();
+  }, [request]);
 
   function applyFilters() {
-    const filters = {
+    setRequest({
       symbol: symbol === ALL_SYMBOLS ? "" : symbol,
       start,
       end,
-    };
-    setQuery(filters);
-    setOffset(0);
-    setLoading(true);
-    void load(filters, 0);
+      offset: 0,
+    });
   }
 
   function gotoOffset(next: number) {
-    setOffset(next);
-    setLoading(true);
-    void load(query, next);
+    setRequest((current) => ({ ...current, offset: next }));
   }
 
   function handleRecorded() {
-    setLoading(true);
-    void load(query, offset);
+    // A new object identity re-runs the effect with unchanged arguments.
+    setRequest((current) => ({ ...current }));
     onTradeRecorded();
   }
 
   const totalPages = page ? Math.max(1, Math.ceil(page.total / PAGE_SIZE)) : 1;
-  const currentPage = Math.floor(offset / PAGE_SIZE) + 1;
+  const currentPage = Math.floor(request.offset / PAGE_SIZE) + 1;
 
   return (
     <Card>
@@ -284,8 +279,8 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={offset === 0 || loading}
-                onClick={() => gotoOffset(Math.max(0, offset - PAGE_SIZE))}
+                disabled={request.offset === 0 || loading}
+                onClick={() => gotoOffset(Math.max(0, request.offset - PAGE_SIZE))}
               >
                 {t("ledger.prev")}
               </Button>
@@ -295,8 +290,8 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
               <Button
                 variant="outline"
                 size="sm"
-                disabled={offset + PAGE_SIZE >= page.total || loading}
-                onClick={() => gotoOffset(offset + PAGE_SIZE)}
+                disabled={request.offset + PAGE_SIZE >= page.total || loading}
+                onClick={() => gotoOffset(request.offset + PAGE_SIZE)}
               >
                 {t("ledger.next")}
               </Button>
