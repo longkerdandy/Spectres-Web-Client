@@ -10,9 +10,9 @@ import type { LucideIcon } from "lucide-react";
  * the shell only sees the typed contributions declared here.
  *
  * `contributes` is an extension-point bag: the platform defines the points
- * (`navItems`, `views`, `locales` today; `toolCards` arrives in v0.2.1) and
- * plugins declare what they add. New extension points are new optional
- * fields, so existing plugins never change when the platform grows one.
+ * (`navItems`, `views`, `locales`, `toolCards`) and plugins declare what
+ * they add. New extension points are new optional fields, so existing
+ * plugins never change when the platform grows one.
  */
 
 export interface PluginNavItem {
@@ -53,6 +53,12 @@ export interface PluginContributions {
    * `defineLocales(import.meta.glob("./locales/*.json", …))`.
    */
   locales?: Record<string, LocaleMessages>;
+  /**
+   * Chat tool-card registrars: components that register CopilotKit
+   * `useRenderTool` renderers for the plugin's Runtime tools and render
+   * nothing. Mounted by the chat page inside the CopilotKit provider.
+   */
+  toolCards?: ComponentType[];
 }
 
 export interface PluginDefinition {

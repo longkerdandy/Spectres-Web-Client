@@ -22,7 +22,7 @@ import {
   formatSignedPercent,
 } from "./format";
 
-function OrderRow({ order }: { order: GridOrder }) {
+export function OrderRow({ order }: { order: GridOrder }) {
   const { t } = useTranslation("etf-grid");
   const sideClass =
     order.side === "buy"
@@ -48,7 +48,7 @@ function OrderRow({ order }: { order: GridOrder }) {
   );
 }
 
-function SignalCell({ signal }: { signal: SignalSnapshot }) {
+export function SignalCell({ signal }: { signal: SignalSnapshot }) {
   const { t } = useTranslation("etf-grid");
   const triggered = signal.orders.filter((order) => order.kind === "triggered");
   const pendingBuy = signal.orders.find(
@@ -87,7 +87,7 @@ function SignalCell({ signal }: { signal: SignalSnapshot }) {
   );
 }
 
-function GateCell({ signal }: { signal: SignalSnapshot | null }) {
+export function GateCell({ signal }: { signal: SignalSnapshot | null }) {
   const { t } = useTranslation("etf-grid");
   if (!signal || !signal.gate_closed) {
     return <span className="text-xs text-muted-foreground">{EM_DASH}</span>;

@@ -117,6 +117,29 @@
     "confirm": "Confirm & record",
     "submitting": "Recording…"
   },
+  "tools": {
+    "preparing": "Preparing tool call…",
+    "executing": "Running…",
+    "unparseable": "The tool returned an unreadable result.",
+    "errorHint": "Diagnose:",
+    "status": {
+      "title": "Grid status"
+    },
+    "refresh": {
+      "title": "Data refresh"
+    },
+    "receipt": {
+      "title": "Trade recorded",
+      "price": "Price × quantity",
+      "gross": "Gross",
+      "commission": "Commission (rate)",
+      "net": "Net",
+      "verify": "Amounts echoed as computed — verify against your fill."
+    },
+    "trades": {
+      "title": "Recent trades"
+    }
+  },
   "errors": {
     "loadFailed": "Failed to load grid status",
     "retry": "Retry",

@@ -1,6 +1,7 @@
 import { CopilotChat, useDefaultRenderTool } from "@copilotkit/react-core/v2";
 import type { CopilotChatLabels } from "@copilotkit/react-core/v2";
 import { useTranslation } from "react-i18next";
+import { toolCardComponents } from "@/plugins";
 
 /** Keys of `CopilotChatLabels` sourced from the `common` namespace. */
 const LABEL_KEYS = [
@@ -34,5 +35,13 @@ export default function ChatPage() {
     LABEL_KEYS.map((key) => [key, t(`chat.labels.${key}`)]),
   );
 
-  return <CopilotChat className="h-full" labels={labels} />;
+  return (
+    <>
+      {/* Plugin-contributed tool-card registrars; render nothing themselves. */}
+      {toolCardComponents().map((ToolCards, index) => (
+        <ToolCards key={index} />
+      ))}
+      <CopilotChat className="h-full" labels={labels} />
+    </>
+  );
 }

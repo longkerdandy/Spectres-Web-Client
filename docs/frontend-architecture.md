@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-10-12 · Covers: v0.2.0 (ETF Grid Frontend)
+> Last updated: 2026-10-13 · Covers: v0.2.1 (ETF Grid Chat Tool Cards)
 
 ---
 
@@ -85,7 +85,7 @@ until Agno emits native 1.0 shapes.
 
 ### 2.5 CopilotKit React SDK (MIT)
 
-Sits on React and the AG-UI client. Three pieces used in v0.1.0:
+Sits on React and the AG-UI client. Four pieces are used:
 
 - **provider / `CopilotKit`** (from `@copilotkit/react-core/v2`): owns the
   agent connection and exposes agent state as React state. The agent
@@ -99,7 +99,15 @@ Sits on React and the AG-UI client. Three pieces used in v0.1.0:
   (placeholder, welcome message, disclaimer, toolbar tooltips) are fed
   from the i18n layer (§4).
 - **built-in generic tool-call renderer** (`useDefaultRenderTool`): tool
-  calls appear as cards with running/done states.
+  calls appear as cards with running/done states. It is the wildcard
+  (`"*"`) fallback for every tool without a named renderer.
+- **custom tool-call renderers** (`useRenderTool` from the v2 surface,
+  since v0.2.1): name-matched cards registered per Runtime tool, taking
+  precedence over the wildcard fallback. Registration is a plugin
+  extension point (§3); the v2 API requires a Standard Schema (zod) for
+  each tool's `parameters` and delivers render props as a discriminated
+  union on `status` (`inProgress` / `executing` / `complete`), with the
+  JSON `result` string available only at `complete`.
 
 Styling note: current CopilotKit components are themselves styled with
 Tailwind utilities (the SDK depends on `tailwind-merge` /
@@ -149,8 +157,9 @@ The thinnest layer — everything above is library code:
   state in `app.tsx` — the `"chat"` literal widened to include any
   plugin-contributed view id. The chat page stays mounted (hidden) while
   a plugin view is shown, so the conversation survives view switches.
-- **ChatPage**: composes the prebuilt chat component, enables the tool
-  renderer, and maps the SDK's chat labels from `common` namespace keys.
+- **ChatPage**: composes the prebuilt chat component, enables the generic
+  tool renderer, mounts the plugin-contributed tool-card registrars (§3),
+  and maps the SDK's chat labels from `common` namespace keys.
 - **`thread.ts`**: `thread_id` helpers — read from `localStorage` on load
   (conversation resumes from the Runtime's PostgreSQL session store),
   generate and persist a fresh id on New chat. The only durable
@@ -171,20 +180,31 @@ hand-registers a Runtime-extension entry again.
 - **Contract** (`src/plugins/types.ts`): `definePlugin({ id, contributes })`.
   `contributes` is an **extension-point bag** — the platform defines typed
   points (`navItems` for the sidebar Plugins group, `views` for main-area
-  pages, `locales` for translation bundles today; `toolCards` arrives in
-  v0.2.1) and plugins declare contributions. New points are new optional
-  fields, so existing plugins never change when the platform grows one.
-  Plugin ids match the Runtime extension name (`etf-grid` ↔ `etf_grid`).
+  pages, `locales` for translation bundles, `toolCards` for chat
+  tool-card renderers) and plugins declare contributions. New points are
+  new optional fields, so existing plugins never change when the platform
+  grows one. Plugin ids match the Runtime extension name
+  (`etf-grid` ↔ `etf_grid`).
 - **Discovery** (`src/plugins/index.ts`): `import.meta.glob("./*/index.ts",
   { eager: true })` — every plugin directory's manifest is bundled at
   build time. This is the platform's **only** scan of the plugins tree;
-  everything else (nav items, views, locale bundles) arrives through the
-  typed manifest. Presence in the tree is the only opt-in (no
+  everything else (nav items, views, locale bundles, tool cards) arrives
+  through the typed manifest. Presence in the tree is the only opt-in (no
   enable/disable gating), and a wrong-shaped manifest fails
   `npm run typecheck` through `definePlugin` — fail-loud, never silently
   degraded. The registry aggregates contributions by extension point:
-  `navItems()` (each entry carrying its plugin's i18n namespace) and
-  `viewFor(id)`.
+  `navItems()` (each entry carrying its plugin's i18n namespace),
+  `viewFor(id)`, and `toolCardComponents()`.
+- **Tool cards** (since v0.2.1): a `toolCards` entry is a registrar
+  component that calls CopilotKit's `useRenderTool` once per Runtime tool
+  (matched by the stable tool names of `runtime-extensions.md` §6.3) and
+  renders nothing. `ChatPage` mounts all registrars inside the
+  `CopilotKit` provider. Renderers consume the standard AG-UI
+  `TOOL_CALL_*` stream; each tool's `result` string carries the Runtime's
+  §6.5 envelope (`{ok, data}` / `{ok, error}`), parsed by the shared
+  platform helper `src/lib/tool-result.ts`. Tool payloads are bare
+  objects/arrays — the REST pagination envelope does not apply — so
+  plugins keep tool-response types separate from their REST types.
 - **Adding a plugin**: create `src/plugins/<id>/index.ts` (default-export
   `definePlugin({...})`) plus its view component — zero edits outside the
   new directory. The sidebar entry and main-area routing appear on the
@@ -198,12 +218,16 @@ hand-registers a Runtime-extension entry again.
 
 The first plugin, `etf-grid`, is the proving ground: its page talks to the
 Runtime extension's REST API (grid status, sync/recompute actions, trade
-ledger, manual trade recording). Everything lives inside
+ledger, manual trade recording), and its tool cards render the extension's
+four AG-UI tools inside the chat stream. Everything lives inside
 `src/plugins/etf-grid/`: a typed `fetch` client (`api.ts`, base URL
 derived from `VITE_AGENT_ENDPOINT`; contract types in `types.ts`), the
 page components, BigInt-backed decimal helpers for the local amount
 preview (`money.ts` — no float math on money), display formatting
-(`format.ts`), and its `locales/` bundles.
+(`format.ts`), the tool cards (`tool-cards/` — one card per tool around a
+shared `ToolCardFrame` that handles streaming states and the result
+envelope; zod parameter schemas in `tool-schemas.ts`, tool payload types
+in `tool-types.ts`), and its `locales/` bundles.
 
 ## 4. Internationalization (i18n)
 
@@ -264,6 +288,7 @@ complete, so a new language is a data-only addition.
 | Navigation | Core registry in `src/nav.ts` + plugin registry in `src/plugins/`; active view is local state (no router) | App shell |
 | Thread persistence | `localStorage` via `thread.ts` | App code → agent connection |
 | Extension REST APIs | Plugin-local typed `fetch` clients; base URL derived from `VITE_AGENT_ENDPOINT` | Plugin pages → Runtime extensions |
+| Chat tool cards | Plugin-contributed `useRenderTool` registrars (zod parameter schemas); shared `{ok,data}`/`{ok,error}` envelope parser in `src/lib/tool-result.ts` | Chat stream → Runtime tools |
 | Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring + extension API base derivation |
 
 One configuration mechanism for all environments; no environment-detection
@@ -285,7 +310,7 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 7. Source Layout (v0.2.0)
+## 7. Source Layout (v0.2.1)
 
 ```text
 src/
@@ -302,16 +327,25 @@ src/
 ├── plugins/
 │   ├── types.ts           # plugin contract: definePlugin/defineLocales + extension points
 │   ├── index.ts           # build-time discovery (import.meta.glob) + aggregation
-│   └── etf-grid/          # first plugin — grid status & trade ledger page
-│       ├── index.ts       # manifest (nav item + view + locales contribution)
+│   └── etf-grid/          # first plugin — grid page + chat tool cards
+│       ├── index.ts       # manifest (nav item + view + locales + toolCards)
 │       ├── api.ts         # typed fetch client; base URL from VITE_AGENT_ENDPOINT
 │       ├── types.ts       # mirror of the Runtime etf_grid REST contract
+│       ├── tool-types.ts  # tool `data` payload shapes (bare, no REST envelopes)
+│       ├── tool-schemas.ts# zod parameter schemas for useRenderTool
 │       ├── money.ts       # BigInt decimal helpers (record-trade preview)
 │       ├── format.ts      # money/percent/date display formatting
 │       ├── grid-page.tsx  # page composition: actions, notices, sections
 │       ├── status-table.tsx   # per-symbol grid status + signal orders
 │       ├── ledger.tsx         # trade ledger: filters + pagination
 │       ├── record-trade-dialog.tsx  # record trade: preview + confirm + 422s
+│       ├── tool-cards/        # chat tool cards (one per Runtime tool)
+│       │   ├── index.tsx      # registrar: useRenderTool × 4 (stable tool names)
+│       │   ├── frame.tsx      # ToolCardFrame: streaming states + envelope parsing
+│       │   ├── status-card.tsx    # get_grid_status
+│       │   ├── refresh-card.tsx   # refresh_grid_data
+│       │   ├── receipt-card.tsx   # record_grid_trade
+│       │   └── trades-card.tsx    # list_grid_trades
 │       └── locales/
 │           └── en.json    # plugin `etf-grid` namespace (English)
 ├── components/
@@ -320,9 +354,10 @@ src/
 ├── hooks/
 │   └── use-mobile.ts      # vendored shadcn hook (sidebar)
 ├── lib/
+│   ├── tool-result.ts     # Runtime tool envelope: {ok,data}/{ok,error} parser
 │   └── utils.ts           # cn() class-merge helper
 ├── pages/
-│   └── chat-page.tsx      # chat view: prebuilt chat + tool renderer + label mapping
+│   └── chat-page.tsx      # chat view: chat + tool renderers + label mapping
 └── index.css              # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
@@ -355,7 +390,6 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 | Milestone theme | Architectural impact |
 |-----------------|----------------------|
 | Additional locales (e.g. zh-CN) | Data-only: new `*.json` files + `SUPPORTED_LANGUAGES`/`coreResources` entries; the language switcher UI arrives with the second locale |
-| ETF Grid chat cards (v0.2.1) | New `toolCards` extension point on the plugin contract — zero changes to existing plugins |
 | Custom dispatch/tool cards | Custom renderer registrations on the existing shadcn/ui base |
 | HITL confirmations | SDK's HITL hooks + confirmation card components |
 | Thread list / management | Real entries in the shell's Recent group + thread metadata from the Runtime; may add a router |
@@ -366,7 +400,8 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 ## 11. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.2.0-etf-grid-frontend.md`](plan/v0.2.0-etf-grid-frontend.md) — current milestone plan
+- [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](plan/v0.2.1-etf-grid-chat-tool-cards.md) — current milestone plan
+- [`docs/plan/v0.2.0-etf-grid-frontend.md`](plan/v0.2.0-etf-grid-frontend.md) — ETF Grid frontend milestone plan
 - [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](plan/v0.1.4-ag-ui-copilotkit-upgrade.md) — AG-UI 1.0 / CopilotKit upgrade milestone plan
 - [`docs/plan/v0.1.3-i18n.md`](plan/v0.1.3-i18n.md) — i18n milestone plan
 - [`docs/plan/v0.1.2-plugin-framework.md`](plan/v0.1.2-plugin-framework.md) — plugin framework milestone plan

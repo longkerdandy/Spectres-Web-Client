@@ -2,7 +2,7 @@
 
 > This document is for coding agents working on the project. It defines the project background, the position of this subproject within the Spectres system, its scope, and its development conventions.
 >
-> Last updated: 2026-10-13
+> Last updated: 2026-10-16
 
 ---
 
@@ -53,11 +53,13 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
-### 3.2 Current Milestone (v0.2.1 — ETF Grid Chat Tool Cards, planned)
+### 3.2 Current Milestone
 
-Adds in-chat tool cards for the ETF Grid extension's four AG-UI tools. Plan: [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
+No active milestone — the next plan has not been written yet.
 
 ### 3.2.1 Completed Milestones
+
+- **v0.2.1 — ETF Grid Chat Tool Cards**: in-chat custom renderers for the ETF Grid extension's four AG-UI tools, matched by stable tool name via CopilotKit v2 `useRenderTool` (zod parameter schemas) through a new `toolCards` plugin extension point — status, pipeline-result, trade-receipt, and recent-trades cards around a shared frame handling streaming states and the Runtime's `{ok,data}` / `{ok,error}` tool envelope; the generic renderer remains the fallback for all other tools. Completed per [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
 
 - **v0.2.0 — ETF Grid Frontend**: standalone grid status & trade ledger page backed by the Runtime's `etf_grid` REST API (base URL derived from `VITE_AGENT_ENDPOINT`) — status table with signal orders, gate state, and combined unrealized/realized P&L (Runtime v0.4.5); filterable, paginated ledger; record-trade modal with local preview, confirm step, and unified 422 rendering. Completed per [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md).
 

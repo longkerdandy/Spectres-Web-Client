@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { PluginDefinition, PluginNavItem, PluginView } from "./types";
 
 export type { PluginNavItem, PluginView } from "./types";
@@ -50,4 +51,12 @@ export function viewFor(id: string): PluginView | undefined {
     if (view) return view;
   }
   return undefined;
+}
+
+/**
+ * All tool-card registrar components contributed by plugins, in scan
+ * order. The chat page mounts them inside the CopilotKit provider.
+ */
+export function toolCardComponents(): ComponentType[] {
+  return plugins.flatMap((plugin) => plugin.contributes.toolCards ?? []);
 }

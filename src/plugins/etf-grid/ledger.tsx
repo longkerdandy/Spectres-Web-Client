@@ -34,7 +34,7 @@ interface LedgerProps {
   onTradeRecorded: () => void;
 }
 
-function SideBadge({ side }: { side: Trade["side"] }) {
+export function SideBadge({ side }: { side: Trade["side"] }) {
   const { t } = useTranslation("etf-grid");
   const className =
     side === "buy"
