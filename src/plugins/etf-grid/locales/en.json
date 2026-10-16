@@ -23,8 +23,7 @@
     "computeDone": "Signals recomputed for {{count}} symbols",
     "computeOk": "All configured symbols computed.",
     "computeSkipped": "Skipped — {{detail}}",
-    "computeFailed": "Signal recompute failed",
-    "computeFailedReason": "Signal recompute failed: {{message}}"
+    "computeFailed": "Signal recompute failed"
   },
   "status": {
     "title": "Grid status",

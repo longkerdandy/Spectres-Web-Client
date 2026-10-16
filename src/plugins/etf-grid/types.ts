@@ -1,6 +1,7 @@
 /**
  * TypeScript mirror of the Runtime's etf_grid REST contract
- * (`/api/v1/extensions/etf-grid`, Runtime v0.4.5). All Decimal values
+ * (`/api/v1/extensions/etf-grid`, Runtime v0.4.5 plus the composite
+ * `POST /refresh` from the scheduler milestone). All Decimal values
  * arrive as strings; dates are ISO strings. Nullable fields are explicit.
  */
 
@@ -63,6 +64,17 @@ export interface SyncResult {
 export interface ComputeSignalsResult {
   signals: Record<string, SignalSnapshot>;
   skipped: Record<string, string>;
+}
+
+/**
+ * `POST /refresh`: composite sync + compute in one call. The HTTP status
+ * participates in the contract: 502 when every data source failed
+ * (compute skipped), 500 when the recompute raised; a partial source
+ * failure is still 200 with per-source `sync.errors`.
+ */
+export interface RefreshResult {
+  sync: SyncResult;
+  signals: ComputeSignalsResult;
 }
 
 export interface Trade {

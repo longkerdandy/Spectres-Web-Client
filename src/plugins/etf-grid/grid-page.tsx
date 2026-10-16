@@ -4,11 +4,11 @@ import { Calculator, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { computeSignals, errorMessage, getStatus, syncMarketData } from "./api";
+import { ApiError, computeSignals, errorMessage, getStatus, refreshData } from "./api";
 import { Ledger } from "./ledger";
 import { computeNotice, syncNotice } from "./notice";
 import { StatusTable } from "./status-table";
-import type { SyncResult, SymbolStatus } from "./types";
+import type { SymbolStatus } from "./types";
 
 /**
  * ETF Grid page: per-symbol grid status with daily signal orders, market
@@ -65,33 +65,21 @@ export default function GridPage() {
     };
   }, [loadStatus]);
 
-  /** Refresh = full pipeline: network sync, then local signal recompute. */
+  /** Refresh = full pipeline (sync + recompute) in one composite call. */
   async function handleRefresh() {
     const controller = new AbortController();
     pipelineControllerRef.current = controller;
     setRefreshing(true);
     setNotice(null);
-    let sync: SyncResult;
+    // Whether server data may have changed and the tables are worth
+    // reloading: always on 200; on failure only when sync completed and
+    // the recompute raised (500) — on 502/network failure nothing changed.
+    let completed = false;
     try {
-      sync = await syncMarketData(controller.signal);
-    } catch (error) {
-      if (!controller.signal.aborted) {
-        setNotice({
-          variant: "destructive",
-          title: t("notice.syncFailed"),
-          description: errorMessage(error),
-        });
-      }
-      setRefreshing(false);
-      return;
-    }
-    const syncInfo = syncNotice(t, sync);
-    const syncLines = [...syncInfo.lines, ...syncInfo.errors];
-    try {
-      const computeInfo = computeNotice(
-        t,
-        await computeSignals(controller.signal),
-      );
+      const result = await refreshData(controller.signal);
+      completed = true;
+      const syncInfo = syncNotice(t, result.sync);
+      const computeInfo = computeNotice(t, result.signals);
       const partial = syncInfo.errors.length > 0 || computeInfo.skipped !== null;
       setNotice({
         variant: partial ? "destructive" : "default",
@@ -99,26 +87,29 @@ export default function GridPage() {
           ? t("notice.refreshPartial")
           : t("notice.refreshSuccess"),
         description: [
-          ...syncLines,
+          ...syncInfo.lines,
+          ...syncInfo.errors,
           computeInfo.done,
           ...(computeInfo.skipped ? [computeInfo.skipped] : []),
         ].join(" · "),
       });
     } catch (error) {
+      if (error instanceof ApiError && error.status === 500) completed = true;
       if (!controller.signal.aborted) {
+        // 502 (or unreachable) = sync stage failed; 500 = recompute raised.
+        const syncFailed = !(error instanceof ApiError) || error.status === 502;
         setNotice({
           variant: "destructive",
-          title: t("notice.refreshPartial"),
-          description: [
-            ...syncLines,
-            t("notice.computeFailedReason", { message: errorMessage(error) }),
-          ].join(" · "),
+          title: syncFailed
+            ? t("notice.syncFailed")
+            : t("notice.computeFailed"),
+          description: errorMessage(error),
         });
       }
     } finally {
       setRefreshing(false);
     }
-    if (!controller.signal.aborted) await loadStatus();
+    if (completed && !controller.signal.aborted) await loadStatus();
   }
 
   /** Recompute alone: local-only math over already-synced data. */
