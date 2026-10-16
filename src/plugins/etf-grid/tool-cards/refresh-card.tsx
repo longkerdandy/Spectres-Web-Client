@@ -1,37 +1,25 @@
 import { RefreshCw } from "lucide-react";
 import { useTranslation } from "react-i18next";
+import { computeNotice, syncNotice } from "../notice";
 import type { RefreshGridData } from "../tool-types";
 import { ToolCardFrame, type ToolCardProps } from "./frame";
 
 function RefreshBody({ data }: { data: RefreshGridData }) {
   const { t } = useTranslation("etf-grid");
-  const candlesDetail = Object.entries(data.candles ?? {})
-    .map(([symbol, rows]) => `${symbol} +${rows}`)
-    .join(", ");
-  const skippedDetail = Object.entries(data.skipped)
-    .map(([symbol, reason]) => `${symbol}: ${reason}`)
-    .join(", ");
+  const sync = syncNotice(t, data);
+  const compute = computeNotice(t, data);
   return (
     <div className="space-y-1 text-xs">
-      <div>
-        {data.candles === null
-          ? t("notice.candlesFailed")
-          : t("notice.candles", { detail: candlesDetail })}
-      </div>
-      <div>
-        {data.valuation === null
-          ? t("notice.valuationFailed")
-          : t("notice.valuation", { count: data.valuation })}
-      </div>
-      <div>{t("notice.computeDone", { count: Object.keys(data.signals).length })}</div>
-      {skippedDetail && (
-        <div className="text-muted-foreground">
-          {t("notice.computeSkipped", { detail: skippedDetail })}
-        </div>
+      {sync.lines.map((line) => (
+        <div key={line}>{line}</div>
+      ))}
+      <div>{compute.done}</div>
+      {compute.skipped && (
+        <div className="text-muted-foreground">{compute.skipped}</div>
       )}
-      {Object.entries(data.errors).map(([source, message]) => (
-        <div key={source} className="text-destructive">
-          {source}: {message}
+      {sync.errors.map((line) => (
+        <div key={line} className="text-destructive">
+          {line}
         </div>
       ))}
     </div>

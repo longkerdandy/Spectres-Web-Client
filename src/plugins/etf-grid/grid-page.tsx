@@ -6,8 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { computeSignals, getStatus, syncMarketData } from "./api";
 import { Ledger } from "./ledger";
+import { computeNotice, syncNotice } from "./notice";
 import { StatusTable } from "./status-table";
-import type { ComputeSignalsResult, SyncResult, SymbolStatus } from "./types";
+import type { SyncResult, SymbolStatus } from "./types";
 
 /**
  * ETF Grid page: per-symbol grid status with daily signal orders, market
@@ -50,41 +51,6 @@ export default function GridPage() {
     void loadStatus();
   }, [loadStatus]);
 
-  function syncParts(result: SyncResult): { parts: string[]; failed: boolean } {
-    const failed = Object.keys(result.errors).length > 0;
-    const candles = result.candles
-      ? Object.entries(result.candles)
-          .map(([symbol, rows]) => `${symbol} +${rows}`)
-          .join(", ")
-      : null;
-    const parts = [
-      candles
-        ? t("notice.candles", { detail: candles })
-        : t("notice.candlesFailed"),
-      result.valuation !== null
-        ? t("notice.valuation", { count: result.valuation })
-        : t("notice.valuationFailed"),
-    ];
-    if (failed) parts.push(Object.values(result.errors).join("; "));
-    return { parts, failed };
-  }
-
-  function computeParts(result: ComputeSignalsResult): {
-    parts: string[];
-    skipped: boolean;
-  } {
-    const computed = Object.keys(result.signals).length;
-    const skipped = Object.entries(result.skipped);
-    const parts = [t("notice.computeDone", { count: computed })];
-    if (skipped.length > 0) {
-      const detail = skipped
-        .map(([symbol, reason]) => `${symbol}: ${reason}`)
-        .join("; ");
-      parts.push(t("notice.computeSkipped", { detail }));
-    }
-    return { parts, skipped: skipped.length > 0 };
-  }
-
   /** Refresh = full pipeline: network sync, then local signal recompute. */
   async function handleRefresh() {
     setRefreshing(true);
@@ -101,23 +67,28 @@ export default function GridPage() {
       setRefreshing(false);
       return;
     }
-    const syncInfo = syncParts(sync);
+    const syncInfo = syncNotice(t, sync);
+    const syncLines = [...syncInfo.lines, ...syncInfo.errors];
     try {
-      const computeInfo = computeParts(await computeSignals());
-      const partial = syncInfo.failed || computeInfo.skipped;
+      const computeInfo = computeNotice(t, await computeSignals());
+      const partial = syncInfo.errors.length > 0 || computeInfo.skipped !== null;
       setNotice({
         variant: partial ? "destructive" : "default",
         title: partial
           ? t("notice.refreshPartial")
           : t("notice.refreshSuccess"),
-        description: [...syncInfo.parts, ...computeInfo.parts].join(" · "),
+        description: [
+          ...syncLines,
+          computeInfo.done,
+          ...(computeInfo.skipped ? [computeInfo.skipped] : []),
+        ].join(" · "),
       });
     } catch (error) {
       setNotice({
         variant: "destructive",
         title: t("notice.refreshPartial"),
         description: [
-          ...syncInfo.parts,
+          ...syncLines,
           t("notice.computeFailedReason", { message: errorMessage(error) }),
         ].join(" · "),
       });
@@ -132,13 +103,11 @@ export default function GridPage() {
     setRecomputing(true);
     setNotice(null);
     try {
-      const info = computeParts(await computeSignals());
+      const info = computeNotice(t, await computeSignals());
       setNotice({
         variant: info.skipped ? "destructive" : "default",
-        title: info.parts[0],
-        description: info.skipped
-          ? info.parts[1]
-          : t("notice.computeOk"),
+        title: info.done,
+        description: info.skipped ?? t("notice.computeOk"),
       });
       await loadStatus();
     } catch (error) {
