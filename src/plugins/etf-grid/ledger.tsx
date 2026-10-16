@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Plus, Search } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -59,22 +59,34 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
   const [error, setError] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  // Latest-wins: starting a new load aborts the previous in-flight one,
+  // and only the latest request may commit state or end the loading flag.
+  const controllerRef = useRef<AbortController | null>(null);
+
   const load = useCallback(
     async (filters: { symbol: string; start: string; end: string }, off: number) => {
+      controllerRef.current?.abort();
+      const controller = new AbortController();
+      controllerRef.current = controller;
       try {
-        const result = await getTrades({
-          symbol: filters.symbol || undefined,
-          start: filters.start || undefined,
-          end: filters.end || undefined,
-          limit: PAGE_SIZE,
-          offset: off,
-        });
+        const result = await getTrades(
+          {
+            symbol: filters.symbol || undefined,
+            start: filters.start || undefined,
+            end: filters.end || undefined,
+            limit: PAGE_SIZE,
+            offset: off,
+          },
+          controller.signal,
+        );
+        if (controller.signal.aborted) return;
         setPage(result);
         setError(null);
       } catch (loadError) {
+        if (controller.signal.aborted) return;
         setError(errorMessage(loadError));
       } finally {
-        setLoading(false);
+        if (controllerRef.current === controller) setLoading(false);
       }
     },
     [],
@@ -84,6 +96,10 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
   // below (filters, pagination, recorded trade).
   useEffect(() => {
     void load({ symbol: "", start: "", end: "" }, 0);
+    return () => {
+      controllerRef.current?.abort();
+      controllerRef.current = null;
+    };
   }, [load]);
 
   function applyFilters() {

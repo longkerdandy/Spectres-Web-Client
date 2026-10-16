@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Calculator, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -32,41 +32,66 @@ export default function GridPage() {
   const [refreshing, setRefreshing] = useState(false);
   const [recomputing, setRecomputing] = useState(false);
 
+  // Latest-wins for status loads (same pattern as the Ledger); the
+  // refresh/recompute pipeline only aborts on unmount — the action
+  // buttons already prevent it from overlapping itself.
+  const statusControllerRef = useRef<AbortController | null>(null);
+  const pipelineControllerRef = useRef<AbortController | null>(null);
+
   const loadStatus = useCallback(async () => {
+    statusControllerRef.current?.abort();
+    const controller = new AbortController();
+    statusControllerRef.current = controller;
     try {
-      setStatus(await getStatus());
+      const result = await getStatus(controller.signal);
+      if (controller.signal.aborted) return;
+      setStatus(result);
       setLoadError(null);
     } catch (error) {
+      if (controller.signal.aborted) return;
       setLoadError(errorMessage(error));
     } finally {
-      setLoading(false);
+      if (statusControllerRef.current === controller) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void loadStatus();
+    return () => {
+      statusControllerRef.current?.abort();
+      statusControllerRef.current = null;
+      pipelineControllerRef.current?.abort();
+      pipelineControllerRef.current = null;
+    };
   }, [loadStatus]);
 
   /** Refresh = full pipeline: network sync, then local signal recompute. */
   async function handleRefresh() {
+    const controller = new AbortController();
+    pipelineControllerRef.current = controller;
     setRefreshing(true);
     setNotice(null);
     let sync: SyncResult;
     try {
-      sync = await syncMarketData();
+      sync = await syncMarketData(controller.signal);
     } catch (error) {
-      setNotice({
-        variant: "destructive",
-        title: t("notice.syncFailed"),
-        description: errorMessage(error),
-      });
+      if (!controller.signal.aborted) {
+        setNotice({
+          variant: "destructive",
+          title: t("notice.syncFailed"),
+          description: errorMessage(error),
+        });
+      }
       setRefreshing(false);
       return;
     }
     const syncInfo = syncNotice(t, sync);
     const syncLines = [...syncInfo.lines, ...syncInfo.errors];
     try {
-      const computeInfo = computeNotice(t, await computeSignals());
+      const computeInfo = computeNotice(
+        t,
+        await computeSignals(controller.signal),
+      );
       const partial = syncInfo.errors.length > 0 || computeInfo.skipped !== null;
       setNotice({
         variant: partial ? "destructive" : "default",
@@ -80,38 +105,47 @@ export default function GridPage() {
         ].join(" · "),
       });
     } catch (error) {
-      setNotice({
-        variant: "destructive",
-        title: t("notice.refreshPartial"),
-        description: [
-          ...syncLines,
-          t("notice.computeFailedReason", { message: errorMessage(error) }),
-        ].join(" · "),
-      });
+      if (!controller.signal.aborted) {
+        setNotice({
+          variant: "destructive",
+          title: t("notice.refreshPartial"),
+          description: [
+            ...syncLines,
+            t("notice.computeFailedReason", { message: errorMessage(error) }),
+          ].join(" · "),
+        });
+      }
     } finally {
       setRefreshing(false);
     }
-    await loadStatus();
+    if (!controller.signal.aborted) await loadStatus();
   }
 
   /** Recompute alone: local-only math over already-synced data. */
   async function handleRecompute() {
+    const controller = new AbortController();
+    pipelineControllerRef.current = controller;
     setRecomputing(true);
     setNotice(null);
     try {
-      const info = computeNotice(t, await computeSignals());
+      const info = computeNotice(
+        t,
+        await computeSignals(controller.signal),
+      );
       setNotice({
         variant: info.skipped ? "destructive" : "default",
         title: info.done,
         description: info.skipped ?? t("notice.computeOk"),
       });
-      await loadStatus();
+      if (!controller.signal.aborted) await loadStatus();
     } catch (error) {
-      setNotice({
-        variant: "destructive",
-        title: t("notice.computeFailed"),
-        description: errorMessage(error),
-      });
+      if (!controller.signal.aborted) {
+        setNotice({
+          variant: "destructive",
+          title: t("notice.computeFailed"),
+          description: errorMessage(error),
+        });
+      }
     } finally {
       setRecomputing(false);
     }

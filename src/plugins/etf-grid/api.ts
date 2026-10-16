@@ -64,26 +64,29 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await response.json()) as T;
 }
 
-export function getStatus(): Promise<SymbolStatus[]> {
-  return request("/status");
+export function getStatus(signal?: AbortSignal): Promise<SymbolStatus[]> {
+  return request("/status", { signal });
 }
 
-export function syncMarketData(): Promise<SyncResult> {
-  return request("/sync", { method: "POST" });
+export function syncMarketData(signal?: AbortSignal): Promise<SyncResult> {
+  return request("/sync", { method: "POST", signal });
 }
 
-export function computeSignals(): Promise<ComputeSignalsResult> {
-  return request("/signals/compute", { method: "POST" });
+export function computeSignals(signal?: AbortSignal): Promise<ComputeSignalsResult> {
+  return request("/signals/compute", { method: "POST", signal });
 }
 
-export function getTrades(filters: TradeFilters): Promise<Page<Trade>> {
+export function getTrades(
+  filters: TradeFilters,
+  signal?: AbortSignal,
+): Promise<Page<Trade>> {
   const params = new URLSearchParams();
   if (filters.symbol) params.set("symbol", filters.symbol);
   if (filters.start) params.set("start", filters.start);
   if (filters.end) params.set("end", filters.end);
   params.set("limit", String(filters.limit));
   params.set("offset", String(filters.offset));
-  return request(`/trades?${params.toString()}`);
+  return request(`/trades?${params.toString()}`, { signal });
 }
 
 export function createTrade(body: TradeCreate): Promise<Trade> {
