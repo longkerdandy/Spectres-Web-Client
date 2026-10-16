@@ -5,6 +5,8 @@
     { "path": "./tsconfig.node.json" }
   ],
   "compilerOptions": {
+    // Inert for the build ("files" is empty); mirrors the alias in
+    // tsconfig.app.json so the shadcn CLI resolves "@/..." imports.
     "paths": {
       "@/*": ["./src/*"]
     }
