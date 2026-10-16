@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/table";
 import { SideBadge } from "../ledger";
 import type { Trade } from "../types";
-import { formatDate, formatInt, formatMoney, formatPrice } from "../format";
+import { formatInt, formatMoney, formatPrice, formatShortDate } from "../format";
 import { ToolCardFrame, type ToolCardProps } from "./frame";
 
 function TradesBody({ trades }: { trades: Trade[] }) {
@@ -42,7 +42,7 @@ function TradesBody({ trades }: { trades: Trade[] }) {
         {trades.map((trade) => (
           <TableRow key={trade.id}>
             <TableCell className="whitespace-nowrap">
-              {formatDate(trade.trade_date)}
+              {formatShortDate(trade.trade_date)}
             </TableCell>
             <TableCell>{trade.symbol}</TableCell>
             <TableCell>

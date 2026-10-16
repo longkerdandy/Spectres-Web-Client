@@ -5,22 +5,20 @@ import { GateCell, SignalCell } from "../status-table";
 import type { SymbolStatus } from "../types";
 import {
   EM_DASH,
-  formatDate,
   formatInt,
   formatLevel,
   formatMoney,
   formatPrice,
+  formatShortDate,
   formatSignedMoney,
   formatSignedPercent,
+  signedClassName,
 } from "../format";
 import { Field, ToolCardFrame, type ToolCardProps } from "./frame";
 
 function SymbolBlock({ row }: { row: SymbolStatus }) {
   const { t } = useTranslation("etf-grid");
-  const unrealizedClass =
-    row.unrealized !== null && row.unrealized.startsWith("-")
-      ? "text-rose-600 dark:text-rose-400"
-      : "text-emerald-600 dark:text-emerald-400";
+  const unrealizedClass = signedClassName(row.unrealized);
   return (
     <div className="space-y-1">
       <div className="flex flex-wrap items-center gap-2">
@@ -43,7 +41,7 @@ function SymbolBlock({ row }: { row: SymbolStatus }) {
           {row.close_date && (
             <span className="text-muted-foreground">
               {" "}
-              {formatDate(row.close_date)}
+              {formatShortDate(row.close_date)}
             </span>
           )}
         </Field>

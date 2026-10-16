@@ -24,7 +24,13 @@ import { errorMessage, getTrades } from "./api";
 import { DatePicker } from "./date-picker";
 import { RecordTradeDialog, type SymbolOption } from "./record-trade-dialog";
 import type { Page, Trade } from "./types";
-import { formatInt, formatMoney, formatPrice } from "./format";
+import {
+  EM_DASH,
+  formatInt,
+  formatMoney,
+  formatPrice,
+  sideClassName,
+} from "./format";
 
 const PAGE_SIZE = 20;
 const ALL_SYMBOLS = "__all__";
@@ -36,12 +42,8 @@ interface LedgerProps {
 
 export function SideBadge({ side }: { side: Trade["side"] }) {
   const { t } = useTranslation("etf-grid");
-  const className =
-    side === "buy"
-      ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
-      : "border-rose-500/40 text-rose-600 dark:text-rose-400";
   return (
-    <Badge variant="outline" className={className}>
+    <Badge variant="outline" className={sideClassName(side)}>
       {t(`ledger.side.${side}`)}
     </Badge>
   );
@@ -267,7 +269,7 @@ export function Ledger({ symbols, onTradeRecorded }: LedgerProps) {
                       className="truncate text-xs text-muted-foreground"
                       title={trade.note ?? undefined}
                     >
-                      {trade.note ?? "—"}
+                      {trade.note ?? EM_DASH}
                     </TableCell>
                   </TableRow>
                 ))}

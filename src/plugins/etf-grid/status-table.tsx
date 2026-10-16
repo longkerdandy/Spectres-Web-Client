@@ -12,25 +12,23 @@ import {
 import type { GridOrder, SignalSnapshot, SymbolStatus } from "./types";
 import {
   EM_DASH,
-  formatDate,
   formatInt,
   formatLevel,
   formatMoney,
   formatPercent,
   formatPrice,
+  formatShortDate,
   formatSignedMoney,
   formatSignedPercent,
+  sideClassName,
+  signedClassName,
 } from "./format";
 
 export function OrderRow({ order }: { order: GridOrder }) {
   const { t } = useTranslation("etf-grid");
-  const sideClass =
-    order.side === "buy"
-      ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
-      : "border-rose-500/40 text-rose-600 dark:text-rose-400";
   return (
     <div className="flex items-center gap-1">
-      <Badge variant="outline" className={sideClass}>
+      <Badge variant="outline" className={sideClassName(order.side)}>
         {t(`status.order.${order.side}`, {
           price: formatPrice(order.limit_price),
           grids: order.grids,
@@ -103,10 +101,7 @@ export function GateCell({ signal }: { signal: SignalSnapshot | null }) {
 
 function StatusRow({ row }: { row: SymbolStatus }) {
   const { t } = useTranslation("etf-grid");
-  const unrealizedClass =
-    row.unrealized !== null && row.unrealized.startsWith("-")
-      ? "text-rose-600 dark:text-rose-400"
-      : "text-emerald-600 dark:text-emerald-400";
+  const unrealizedClass = signedClassName(row.unrealized);
   return (
     <TableRow>
       <TableCell>
@@ -125,7 +120,7 @@ function StatusRow({ row }: { row: SymbolStatus }) {
           <>
             <br />
             <span className="text-xs text-muted-foreground">
-              {formatDate(row.close_date)}
+              {formatShortDate(row.close_date)}
             </span>
           </>
         )}

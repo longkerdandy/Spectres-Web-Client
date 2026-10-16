@@ -1,8 +1,11 @@
 /**
- * Presentation formatting for the ETF Grid plugin. Money arrives as
- * strings; formatting for display (thousand separators) is the only place
- * values pass through Number — never arithmetic.
+ * Presentation formatting for the ETF Grid plugin: display strings and
+ * semantic color classes. Money arrives as strings; formatting for
+ * display (thousand separators) is the only place values pass through
+ * Number — never arithmetic.
  */
+
+import type { Side } from "./types";
 
 const money = new Intl.NumberFormat("en-US", {
   minimumFractionDigits: 2,
@@ -52,10 +55,24 @@ export function formatSignedPercent(fraction: string | null): string {
   return percent < 0 ? `-${formatted}` : `+${formatted}`;
 }
 
-/** ISO date "2026-09-26" → "09-26". */
-export function formatDate(iso: string | null): string {
+/** ISO date "2026-09-26" → "09-26" — year dropped; compact form for dense tables and cards. */
+export function formatShortDate(iso: string | null): string {
   if (!iso) return EM_DASH;
   return iso.slice(5);
+}
+
+/** Badge outline colors for a trade/order side: green buy, red sell. */
+export function sideClassName(side: Side): string {
+  return side === "buy"
+    ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+    : "border-rose-500/40 text-rose-600 dark:text-rose-400";
+}
+
+/** Text color for a signed money string: red when "-"-prefixed, else green. */
+export function signedClassName(value: string | null): string {
+  return value !== null && value.startsWith("-")
+    ? "text-rose-600 dark:text-rose-400"
+    : "text-emerald-600 dark:text-emerald-400";
 }
 
 /** Signed level display: 1 → "+1", -2 → "-2", 0 → "0". */

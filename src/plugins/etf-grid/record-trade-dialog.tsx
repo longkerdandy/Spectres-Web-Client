@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { ApiError, createTrade, errorMessage } from "./api";
 import { DatePicker } from "./date-picker";
+import { EM_DASH } from "./format";
 import type { Side, ValidationErrorItem } from "./types";
 import { addDecimal, isPositiveDecimal, mulDecimal, mulInt } from "./money";
 
@@ -212,15 +213,15 @@ export function RecordTradeDialog({
             </div>
             <div className="flex justify-between">
               <span>{t("record.gross")}</span>
-              <span>{preview?.gross ?? "—"}</span>
+              <span>{preview?.gross ?? EM_DASH}</span>
             </div>
             <div className="flex justify-between">
               <span>{t("record.commission")}</span>
-              <span>{preview?.commission ?? "—"}</span>
+              <span>{preview?.commission ?? EM_DASH}</span>
             </div>
             <div className="flex justify-between font-medium">
               <span>{t("record.net")}</span>
-              <span>{preview?.net ?? "—"}</span>
+              <span>{preview?.net ?? EM_DASH}</span>
             </div>
           </div>
 

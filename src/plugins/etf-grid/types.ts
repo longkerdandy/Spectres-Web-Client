@@ -61,7 +61,7 @@ export interface SyncResult {
 
 /** `POST /signals/compute`: local recompute; skipped symbols carry reasons. */
 export interface ComputeSignalsResult {
-  signals: Record<string, unknown>;
+  signals: Record<string, SignalSnapshot>;
   skipped: Record<string, string>;
 }
 
