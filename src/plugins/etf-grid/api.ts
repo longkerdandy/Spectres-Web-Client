@@ -1,4 +1,5 @@
 import { agentEndpoint } from "@/ag-ui";
+import { accessToken, requireReauth } from "@/auth";
 import type {
   ComputeSignalsResult,
   Page,
@@ -38,10 +39,19 @@ export function errorMessage(error: unknown): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await accessToken();
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { "Content-Type": "application/json" },
     ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...init?.headers,
+    },
   });
+  if (response.status === 401) {
+    requireReauth();
+    throw new ApiError(response.status, "Authentication required");
+  }
   if (!response.ok) {
     let message = `Request failed with status ${response.status}`;
     let validation: ValidationErrorItem[] | undefined;

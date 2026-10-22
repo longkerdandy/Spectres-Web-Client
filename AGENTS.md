@@ -55,7 +55,7 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 
 ### 3.2 Current Milestone
 
-No active milestone — the next plan has not been written yet.
+**v0.3.0 — User Login** (in progress): Logto OIDC sign-in gate for the SPA, JWT access token (resource `https://spectres.runtime/api`) attached as Bearer to AG-UI and extension REST calls, sign-out in the shell. Plan: [`docs/plan/v0.3.0-user-login.md`](docs/plan/v0.3.0-user-login.md).
 
 ### 3.2.1 Completed Milestones
 
@@ -78,7 +78,7 @@ The following belong to other layers or later milestones:
 
 - **Agent logic, tools, memory, persistence**: the Runtime layer. This app contains no business logic beyond presentation concerns.
 - **Backend services of any kind**: no BFF, no server-side state; the only server is the Runtime.
-- **Authentication / multi-tenancy**: deferred (single-user phase); the shell's user area is a static placeholder.
+- **Multi-tenancy**: deferred (single-user phase). Authentication itself is delivered by v0.3.0 (Logto sign-in, JWT to the Runtime); per-tenant UI concerns remain out of scope.
 - **Router library / deep-linking**: the active view is local React state until a milestone forces a router.
 - **Mini-program and native mobile apps**: separate future projects; design choices here must not preclude them.
 

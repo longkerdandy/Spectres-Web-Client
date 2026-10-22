@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-10-13 · Covers: v0.2.1 (ETF Grid Chat Tool Cards)
+> Last updated: 2026-10-22 · Covers: v0.3.0 (User Login)
 
 ---
 
@@ -277,7 +277,44 @@ complete, so a new language is a data-only addition.
   code splitting of locale bundles (eager; revisit when bundle size
   forces it), date/number formatting (added per-milestone when needed).
 
-## 5. Cross-Cutting Concerns
+## 5. Authentication
+
+Since v0.3.0 the Runtime enforces JWT authentication on every endpoint
+except `/health` (Runtime ADR 0009). The app signs the user in against the
+self-hosted **Logto** IdP using the OIDC authorization-code flow with PKCE
+for public clients, via `@logto/react`:
+
+- **Configuration**: `VITE_LOGTO_ENDPOINT`, `VITE_LOGTO_APP_ID`, and
+  `VITE_LOGTO_API_RESOURCE` (defaults `http://localhost:3001`, the
+  registered SPA App ID, `https://spectres.runtime/api`) are resolved in
+  `src/auth.ts`. The API resource indicator is essential — Logto only
+  issues a JWT (rather than an opaque token the Runtime rejects) when the
+  token is requested for this audience.
+- **Provider & gate**: `main.tsx` wraps the app in `LogtoProvider`;
+  `AuthGate` (`src/components/auth-gate.tsx`) renders a loading state while
+  the SDK initializes, a minimal login screen when unauthenticated, and the
+  app once authenticated. The sign-in redirect lands on `/callback`, which
+  the gate detects by pathname (still no router) and completes via
+  `useHandleSignInCallback`, then returns to `/`.
+- **Token storage**: entirely inside the Logto SDK; the app never persists
+  tokens itself. Access tokens expire after 1h;
+  `getAccessToken(resource)` refreshes transparently via the refresh token.
+- **Token plumbing outside React**: `src/auth.ts` holds a module-level
+  token getter and re-auth handler, registered by an effect inside the
+  provider tree (`AuthBridge`), so non-component code (the AG-UI agent, the
+  plugin REST clients) can await a token. Failing to obtain a token twice
+  in a row triggers the re-auth handler (a `signIn` redirect).
+- **AG-UI calls**: `createAgent` passes a custom `fetch` to `HttpAgent`
+  (`HttpAgentConfig.fetch` is invoked per request) that sets
+  `Authorization: Bearer <token>` from a fresh `getAccessToken` call — one
+  agent per thread is preserved, no `CopilotKit` remount, no lost chat
+  state.
+- **Extension REST calls**: the plugin `request()` wrapper attaches the
+  same Bearer token; a 401 response triggers the re-auth handler.
+- **Sign out**: the shell's user area shows the name/email from
+  `getIdTokenClaims()` and signs out via `signOut(postLogoutRedirectUri)`.
+
+## 6. Cross-Cutting Concerns
 
 | Concern | Mechanism | Touches |
 |---------|-----------|---------|
@@ -290,11 +327,12 @@ complete, so a new language is a data-only addition.
 | Extension REST APIs | Plugin-local typed `fetch` clients; base URL derived from `VITE_AGENT_ENDPOINT` | Plugin pages → Runtime extensions |
 | Chat tool cards | Plugin-contributed `useRenderTool` registrars (zod parameter schemas); shared `{ok,data}`/`{ok,error}` envelope parser in `src/lib/tool-result.ts` | Chat stream → Runtime tools |
 | Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring + extension API base derivation |
+| Authentication | Logto OIDC via `@logto/react`; `VITE_LOGTO_*` env config; Bearer token per request on AG-UI + extension REST (§5) | All Runtime calls |
 
 One configuration mechanism for all environments; no environment-detection
 branches anywhere in the code.
 
-## 6. Run Lifecycle (data flow)
+## 7. Run Lifecycle (data flow)
 
 1. User sends a message in the chat component.
 2. The provider builds a `RunAgentInput` (thread id, run id, messages,
@@ -310,14 +348,15 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 7. Source Layout (v0.2.1)
+## 8. Source Layout (v0.3.0)
 
 ```text
 src/
-├── main.tsx               # entry; imports i18n (sync init) + styles, mounts <App/>
+├── main.tsx               # entry; imports i18n (sync init) + styles, mounts LogtoProvider + AuthGate
 ├── app.tsx                # view state, CopilotKit provider, AppShell wiring
 ├── nav.ts                 # typed core sidebar registry (translation keys, not copy)
-├── ag-ui.ts               # HttpAgent wiring + endpoint resolution
+├── ag-ui.ts               # HttpAgent wiring + endpoint resolution; per-request Bearer token via custom fetch
+├── auth.ts                # Logto config (VITE_LOGTO_*) + module-level token getter / re-auth plumbing
 ├── thread.ts              # thread_id localStorage helpers
 ├── i18n/
 │   ├── index.ts           # i18next init: language resolution, resource assembly
@@ -349,7 +388,8 @@ src/
 │       └── locales/
 │           └── en.json    # plugin `etf-grid` namespace (English)
 ├── components/
-│   ├── app-shell.tsx      # sidebar frame (shadcn Sidebar primitives)
+│   ├── app-shell.tsx      # sidebar frame (shadcn Sidebar primitives) + user area (claims, sign out)
+│   ├── auth-gate.tsx      # loading / login / /callback screens; AuthBridge registers token plumbing
 │   └── ui/                # vendored shadcn/ui components
 ├── hooks/
 │   └── use-mobile.ts      # vendored shadcn hook (sidebar)
@@ -365,8 +405,11 @@ Deliberately absent: router, state-management library, API abstraction
 layer (CopilotKit *is* the abstraction), test scaffolding. The component
 library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 
-## 8. Error Handling (MVP level)
+## 9. Error Handling (MVP level)
 
+- **Unauthenticated / expired session**: token acquisition retries once,
+  then redirects to Logto sign-in; extension REST calls do the same on a
+  401 response (§5).
 - **Runtime unreachable / wrong endpoint**: the chat surface shows the
   connection error surfaced by the SDK; README documents checking
   `VITE_AGENT_ENDPOINT` and the Runtime's CORS allowlist.
@@ -376,7 +419,7 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 - No retry queues, offline handling, or error boundaries beyond the SDK
   defaults in this milestone.
 
-## 9. Boundaries (what this app must never grow into)
+## 10. Boundaries (what this app must never grow into)
 
 - No business logic, agent logic, or prompt construction — that is the
   Runtime's job.
@@ -385,7 +428,7 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
   only contract.
 - Durable user data beyond `localStorage` thread id belongs to the Runtime.
 
-## 10. Evolution Path (later milestones)
+## 11. Evolution Path (later milestones)
 
 | Milestone theme | Architectural impact |
 |-----------------|----------------------|
@@ -397,10 +440,11 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 | Remote/cloud deployment | Only `VITE_AGENT_ENDPOINT` changes (Runtime ADR 0005) |
 | Tests | Introduce vitest when component logic outgrows manual walkthroughs |
 
-## 11. References
+## 12. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](plan/v0.2.1-etf-grid-chat-tool-cards.md) — current milestone plan
+- [`docs/plan/v0.3.0-user-login.md`](plan/v0.3.0-user-login.md) — current milestone plan
+- [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](plan/v0.2.1-etf-grid-chat-tool-cards.md) — ETF Grid tool cards milestone plan
 - [`docs/plan/v0.2.0-etf-grid-frontend.md`](plan/v0.2.0-etf-grid-frontend.md) — ETF Grid frontend milestone plan
 - [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](plan/v0.1.4-ag-ui-copilotkit-upgrade.md) — AG-UI 1.0 / CopilotKit upgrade milestone plan
 - [`docs/plan/v0.1.3-i18n.md`](plan/v0.1.3-i18n.md) — i18n milestone plan
@@ -408,6 +452,7 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 - [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — app shell milestone plan
 - [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — MVP milestone plan
 - Runtime architecture: `../../Spectres-Runtime/docs/architecture.md`
-- Runtime ADR 0004 (AG-UI visibility), ADR 0005 (deployment topology): `../../Spectres-Runtime/docs/adr/`
+- Runtime ADR 0004 (AG-UI visibility), ADR 0005 (deployment topology), ADR 0009 (Logto IdP / JWT auth): `../../Spectres-Runtime/docs/adr/`
+- Logto React SDK: https://docs.logto.io/quick-starts/framework/react/
 - CopilotKit — connect AG-UI agents: https://docs.copilotkit.ai/backend/ag-ui
 - AG-UI protocol: https://docs.ag-ui.com/

@@ -1,7 +1,10 @@
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown } from "lucide-react";
+import { useLogto } from "@logto/react";
+import { ChevronDown, LogOut } from "lucide-react";
+import { postLogoutRedirectUri } from "@/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import {
   Collapsible,
   CollapsibleContent,
@@ -61,6 +64,25 @@ export function AppShell({
   children,
 }: AppShellProps) {
   const { t } = useTranslation("common");
+  const { signOut, getIdTokenClaims } = useLogto();
+  const [userName, setUserName] = useState<string>();
+  const [userEmail, setUserEmail] = useState<string>();
+
+  useEffect(() => {
+    void getIdTokenClaims().then((claims) => {
+      setUserName(claims?.name ?? claims?.username ?? undefined);
+      setUserEmail(claims?.email ?? undefined);
+    });
+  }, [getIdTokenClaims]);
+
+  const displayName = userName ?? userEmail ?? "";
+  const initials =
+    displayName
+      .split(/\s+/)
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?";
 
   function runAction(action: NavAction | undefined) {
     if (!action) return;
@@ -164,14 +186,25 @@ export function AppShell({
         <SidebarFooter>
           <div className="flex items-center gap-2.5 px-2 py-2">
             <Avatar className="size-8 shrink-0">
-              <AvatarFallback>DG</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
-            <div className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
-              <div className="truncate text-sm">Dong-xu Gu</div>
-              <div className="text-xs text-muted-foreground">
-                {t("user.localSingleUser")}
-              </div>
+            <div className="min-w-0 flex-1 leading-tight group-data-[collapsible=icon]:hidden">
+              <div className="truncate text-sm">{displayName}</div>
+              {userName && userEmail && (
+                <div className="truncate text-xs text-muted-foreground">
+                  {userEmail}
+                </div>
+              )}
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-8 shrink-0 group-data-[collapsible=icon]:hidden"
+              title={t("auth.signOut")}
+              onClick={() => void signOut(postLogoutRedirectUri())}
+            >
+              <LogOut />
+            </Button>
           </div>
         </SidebarFooter>
       </Sidebar>

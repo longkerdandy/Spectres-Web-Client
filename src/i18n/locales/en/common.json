@@ -7,8 +7,12 @@
     "recent": "Recent",
     "currentConversation": "Current conversation"
   },
-  "user": {
-    "localSingleUser": "Local single user"
+  "auth": {
+    "loading": "Loading…",
+    "signIn": "Sign in",
+    "signingIn": "Signing in…",
+    "signInFailed": "Sign-in failed. Please go back and try again.",
+    "signOut": "Sign out"
   },
   "chat": {
     "labels": {
