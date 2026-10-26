@@ -9,8 +9,6 @@
   },
   "auth": {
     "loading": "Loading…",
-    "signIn": "Sign in",
-    "signingIn": "Signing in…",
     "signInFailed": "Sign-in failed. Please go back and try again.",
     "signOut": "Sign out"
   },

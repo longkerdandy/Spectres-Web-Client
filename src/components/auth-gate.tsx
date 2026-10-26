@@ -7,8 +7,6 @@ import {
   registerAuthHandlers,
   signInRedirectUri,
 } from "@/auth";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 function CenteredScreen({ children }: { children: ReactNode }) {
   return (
@@ -29,26 +27,12 @@ function LoadingScreen() {
   );
 }
 
-function LoginScreen() {
-  const { t } = useTranslation("common");
+function SignInRedirect() {
   const { signIn } = useLogto();
-  return (
-    <CenteredScreen>
-      <Card className="w-72 text-center">
-        <CardHeader>
-          <CardTitle>Spectres</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Button
-            className="w-full"
-            onClick={() => void signIn(signInRedirectUri())}
-          >
-            {t("auth.signIn")}
-          </Button>
-        </CardContent>
-      </Card>
-    </CenteredScreen>
-  );
+  useEffect(() => {
+    void signIn(signInRedirectUri());
+  }, [signIn]);
+  return <LoadingScreen />;
 }
 
 function SignInCallback() {
@@ -66,15 +50,9 @@ function SignInCallback() {
     );
   }
   if (!isLoading && !isAuthenticated) {
-    return <LoginScreen />;
+    return <SignInRedirect />;
   }
-  return (
-    <CenteredScreen>
-      <span className="text-sm text-muted-foreground">
-        {t("auth.signingIn")}
-      </span>
-    </CenteredScreen>
-  );
+  return <LoadingScreen />;
 }
 
 function AuthBridge() {
@@ -95,7 +73,7 @@ export function AuthGate() {
     return <SignInCallback />;
   }
   if (!isAuthenticated) {
-    return isLoading ? <LoadingScreen /> : <LoginScreen />;
+    return isLoading ? <LoadingScreen /> : <SignInRedirect />;
   }
   return (
     <>
