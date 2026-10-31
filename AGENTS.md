@@ -2,7 +2,7 @@
 
 > This document is for coding agents working on the project. It defines the project background, the position of this subproject within the Spectres system, its scope, and its development conventions.
 >
-> Last updated: 2026-10-16
+> Last updated: 2026-11-01
 
 ---
 
@@ -55,9 +55,11 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 
 ### 3.2 Current Milestone
 
-**v0.3.0 — User Login** (in progress): Logto OIDC sign-in gate for the SPA, JWT access token (resource `https://spectres.runtime/api`) attached as Bearer to AG-UI and extension REST calls, sign-out in the shell. Plan: [`docs/plan/v0.3.0-user-login.md`](docs/plan/v0.3.0-user-login.md).
+No active milestone.
 
 ### 3.2.1 Completed Milestones
+
+- **v0.3.0 — User Login**: Logto OIDC sign-in gate for the SPA, JWT access token (resource `https://spectres.runtime/api`) attached as Bearer to AG-UI and extension REST calls, sign-out in the shell. Completed per [`docs/plan/v0.3.0-user-login.md`](docs/plan/v0.3.0-user-login.md).
 
 - **v0.2.1 — ETF Grid Chat Tool Cards**: in-chat custom renderers for the ETF Grid extension's four AG-UI tools, matched by stable tool name via CopilotKit v2 `useRenderTool` (zod parameter schemas) through a new `toolCards` plugin extension point — status, pipeline-result, trade-receipt, and recent-trades cards around a shared frame handling streaming states and the Runtime's `{ok,data}` / `{ok,error}` tool envelope; the generic renderer remains the fallback for all other tools. Completed per [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
 
