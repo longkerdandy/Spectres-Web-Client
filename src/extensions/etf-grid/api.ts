@@ -1,5 +1,8 @@
-import { agentEndpoint } from "@/ag-ui";
-import { accessToken, requireReauth } from "@/auth";
+import {
+  RuntimeApiError,
+  runtimeBaseUrl,
+  runtimeRequest,
+} from "@/lib/runtime-api";
 import type {
   ComputeSignalsResult,
   Page,
@@ -18,7 +21,7 @@ import type {
  * configuration.
  */
 
-const API_BASE = `${agentEndpoint().replace(/\/agui\/?$/, "")}/api/v1/extensions/etf-grid`;
+const API_BASE = `${runtimeBaseUrl}/api/v1/extensions/etf-grid`;
 
 /** Request failure; `validation` carries the unified 422 `detail[]` items. */
 export class ApiError extends Error {
@@ -39,39 +42,18 @@ export function errorMessage(error: unknown): string {
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const token = await accessToken();
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...init?.headers,
-    },
-  });
-  if (response.status === 401) {
-    requireReauth();
-    throw new ApiError(response.status, "Authentication required");
+  try {
+    return await runtimeRequest<T>(`${API_BASE}${path}`, init);
+  } catch (error) {
+    if (!(error instanceof RuntimeApiError)) throw error;
+    const body = error.body;
+    const validation =
+      body && typeof body === "object" && "detail" in body &&
+      Array.isArray((body as { detail: unknown }).detail)
+        ? ((body as { detail: ValidationErrorItem[] }).detail)
+        : undefined;
+    throw new ApiError(error.status, error.message, validation);
   }
-  if (!response.ok) {
-    let message = `Request failed with status ${response.status}`;
-    let validation: ValidationErrorItem[] | undefined;
-    try {
-      const body: unknown = await response.json();
-      if (body && typeof body === "object" && "detail" in body) {
-        const detail = (body as { detail: unknown }).detail;
-        if (Array.isArray(detail)) {
-          validation = detail as ValidationErrorItem[];
-          message = validation.map((item) => item.msg).join("; ");
-        } else if (typeof detail === "string") {
-          message = detail;
-        }
-      }
-    } catch {
-      // Non-JSON error body — keep the status-based message.
-    }
-    throw new ApiError(response.status, message, validation);
-  }
-  return (await response.json()) as T;
 }
 
 export function getStatus(signal?: AbortSignal): Promise<SymbolStatus[]> {

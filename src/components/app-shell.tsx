@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useLogto } from "@logto/react";
-import { ChevronDown, LogOut } from "lucide-react";
+import { ChevronDown, LogOut, ShieldCheck } from "lucide-react";
 import { postLogoutRedirectUri } from "@/auth";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -30,22 +30,23 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
-  pluginGroup,
+  extensionGroup,
   primaryNav,
   recentConversations,
   type NavAction,
   type NavItem,
   type ViewId,
 } from "@/nav";
-import { navItems as pluginNavItems, type PluginNavEntry } from "@/plugins";
+import { navItems as extensionNavItems, type ExtensionNavEntry } from "@/extensions";
 
 /** Eagerly discovered at build time; constant for the app's lifetime. */
-const pluginItems = pluginNavItems();
+const extensionItems = extensionNavItems();
 
 interface AppShellProps {
-  activeView: ViewId;
-  onSelectView: (view: ViewId) => void;
-  onResetThread: () => void;
+  activeView?: ViewId;
+  onSelectView?: (view: ViewId) => void;
+  onResetThread?: () => void;
+  mode?: "assistant" | "admin";
   children: ReactNode;
 }
 
@@ -61,6 +62,7 @@ export function AppShell({
   activeView,
   onSelectView,
   onResetThread,
+  mode = "assistant",
   children,
 }: AppShellProps) {
   const { t } = useTranslation("common");
@@ -88,8 +90,8 @@ export function AppShell({
     if (!action) return;
     switch (action.type) {
       case "reset-thread":
-        onResetThread();
-        onSelectView("chat");
+        onResetThread?.();
+        onSelectView?.("chat");
         break;
     }
   }
@@ -109,12 +111,12 @@ export function AppShell({
     );
   }
 
-  function renderPluginNavItem(item: PluginNavEntry) {
+  function renderExtensionNavItem(item: ExtensionNavEntry) {
     return (
       <SidebarMenuSubItem key={item.id}>
         <SidebarMenuSubButton
           isActive={activeView === item.id}
-          onClick={() => onSelectView(item.id)}
+          onClick={() => onSelectView?.(item.id)}
         >
           <item.icon />
           <span>{t(`${item.namespace}:${item.labelKey}`)}</span>
@@ -139,48 +141,66 @@ export function AppShell({
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {primaryNav.map(renderNavItem)}
-                <SidebarMenuItem>
-                  <Collapsible defaultOpen className="group/collapsible">
-                    <CollapsibleTrigger asChild>
-                      <SidebarMenuButton>
-                        <pluginGroup.icon />
-                        <span>{t(pluginGroup.labelKey)}</span>
-                        <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                      </SidebarMenuButton>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <SidebarMenuSub>
-                        {pluginItems.map(renderPluginNavItem)}
-                      </SidebarMenuSub>
-                    </CollapsibleContent>
-                  </Collapsible>
-                </SidebarMenuItem>
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-
-          <SidebarGroup>
-            <SidebarGroupLabel>{t("nav.recent")}</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {recentConversations.map((conversation) => (
-                  <SidebarMenuItem key={conversation.id}>
-                    <SidebarMenuButton
-                      isActive={activeView === conversation.view}
-                      onClick={() => onSelectView(conversation.view)}
-                    >
-                      <conversation.icon />
-                      <span>{t(conversation.titleKey)}</span>
+          {mode === "admin" ? (
+            <SidebarGroup>
+              <SidebarGroupLabel>{t("admin.console")}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton isActive>
+                      <ShieldCheck />
+                      <span>{t("admin.title")}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ) : (
+            <>
+              <SidebarGroup>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {primaryNav.map(renderNavItem)}
+                    <SidebarMenuItem>
+                      <Collapsible defaultOpen className="group/collapsible">
+                        <CollapsibleTrigger asChild>
+                          <SidebarMenuButton>
+                            <extensionGroup.icon />
+                            <span>{t(extensionGroup.labelKey)}</span>
+                            <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                          </SidebarMenuButton>
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <SidebarMenuSub>
+                            {extensionItems.map(renderExtensionNavItem)}
+                          </SidebarMenuSub>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    </SidebarMenuItem>
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+
+              <SidebarGroup>
+                <SidebarGroupLabel>{t("nav.recent")}</SidebarGroupLabel>
+                <SidebarGroupContent>
+                  <SidebarMenu>
+                    {recentConversations.map((conversation) => (
+                      <SidebarMenuItem key={conversation.id}>
+                        <SidebarMenuButton
+                          isActive={activeView === conversation.view}
+                          onClick={() => onSelectView?.(conversation.view)}
+                        >
+                          <conversation.icon />
+                          <span>{t(conversation.titleKey)}</span>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    ))}
+                  </SidebarMenu>
+                </SidebarGroupContent>
+              </SidebarGroup>
+            </>
+          )}
         </SidebarContent>
 
         <SidebarFooter>

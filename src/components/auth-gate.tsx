@@ -1,8 +1,11 @@
-import { useEffect, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useHandleSignInCallback, useLogto } from "@logto/react";
 import { useTranslation } from "react-i18next";
 import App from "@/app";
+import AdminPage from "@/pages/admin-page";
 import {
+  accessToken,
+  decodeAccessToken,
   logtoApiResource,
   registerAuthHandlers,
   signInRedirectUri,
@@ -55,15 +58,53 @@ function SignInCallback() {
   return <LoadingScreen />;
 }
 
-function AuthBridge() {
+function AuthBridge({ onToken }: { onToken: (token: string) => void }) {
   const { getAccessToken, signIn } = useLogto();
   useEffect(() => {
     registerAuthHandlers(
-      async () => (await getAccessToken(logtoApiResource())) ?? null,
+      async () => {
+        const token = (await getAccessToken(logtoApiResource())) ?? null;
+        if (token) onToken(token);
+        return token;
+      },
       () => void signIn(signInRedirectUri()),
     );
-  }, [getAccessToken, signIn]);
+    void accessToken();
+  }, [getAccessToken, onToken, signIn]);
   return null;
+}
+
+type RoleState =
+  | { role: "loading"; currentUserId: null }
+  | { role: "user" | "admin"; currentUserId: string | null };
+
+function AuthenticatedSurface() {
+  const [roleState, setRoleState] = useState<RoleState>({
+    role: "loading",
+    currentUserId: null,
+  });
+  const handleToken = useCallback((token: string) => {
+    const claims = decodeAccessToken(token);
+    setRoleState({
+      role:
+        claims.sub && claims.scopes.includes("agent_os:admin") ? "admin" : "user",
+      currentUserId: claims.sub,
+    });
+  }, []);
+
+  let surface: ReactNode = <LoadingScreen />;
+  if (roleState.role === "admin") {
+    surface = <AdminPage currentUserId={roleState.currentUserId} />;
+  } else if (roleState.role === "user") {
+    surface = <App />;
+  }
+
+  return (
+    <>
+      <AuthBridge onToken={handleToken} />
+      {surface}
+    </>
+  );
 }
 
 export function AuthGate() {
@@ -75,10 +116,5 @@ export function AuthGate() {
   if (!isAuthenticated) {
     return isLoading ? <LoadingScreen /> : <SignInRedirect />;
   }
-  return (
-    <>
-      <AuthBridge />
-      <App />
-    </>
-  );
+  return <AuthenticatedSurface />;
 }

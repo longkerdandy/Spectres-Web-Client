@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { CopilotKit } from "@copilotkit/react-core/v2";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AppShell } from "@/components/app-shell";
-import { viewFor } from "@/plugins";
+import { viewFor } from "@/extensions";
 import { AGENT_ID, createAgent } from "./ag-ui";
 import { loadThreadId, resetThreadId } from "./thread";
 import type { ViewId } from "./nav";
@@ -13,7 +13,7 @@ export default function App() {
   const [view, setView] = useState<ViewId>("chat");
   const agent = useMemo(() => createAgent(threadId), [threadId]);
 
-  const pluginView = view === "chat" ? undefined : viewFor(view);
+  const extensionView = view === "chat" ? undefined : viewFor(view);
 
   return (
     <TooltipProvider>
@@ -28,13 +28,13 @@ export default function App() {
           selfManagedAgents={{ [AGENT_ID]: agent }}
           showIntelligenceIndicator={false}
         >
-          {/* Kept mounted while plugin views are shown so the conversation
+          {/* Kept mounted while extension views are shown so the conversation
               state survives view switches. */}
           <div className={view === "chat" ? "h-full" : "hidden"}>
             <ChatPage />
           </div>
         </CopilotKit>
-        {pluginView && <pluginView.component />}
+        {extensionView && <extensionView.component />}
       </AppShell>
     </TooltipProvider>
   );

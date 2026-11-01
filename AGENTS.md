@@ -55,23 +55,23 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 
 ### 3.2 Current Milestone
 
-No active milestone.
+- **v0.3.1 — Minimal Admin Console**: JWT `scopes`-derived role views with a management-only console for `agent_os:admin` administrators; public Runtime system overview and paginated Runtime UserDirectory enable/disable, with no chat or AG-UI surface mounted in admin mode. Ordinary users retain the existing assistant experience. Implementation follows [`docs/plan/v0.3.1-admin-console.md`](docs/plan/v0.3.1-admin-console.md).
 
 ### 3.2.1 Completed Milestones
 
 - **v0.3.0 — User Login**: Logto OIDC sign-in gate for the SPA, JWT access token (resource `https://spectres.runtime/api`) attached as Bearer to AG-UI and extension REST calls, sign-out in the shell. Completed per [`docs/plan/v0.3.0-user-login.md`](docs/plan/v0.3.0-user-login.md).
 
-- **v0.2.1 — ETF Grid Chat Tool Cards**: in-chat custom renderers for the ETF Grid extension's four AG-UI tools, matched by stable tool name via CopilotKit v2 `useRenderTool` (zod parameter schemas) through a new `toolCards` plugin extension point — status, pipeline-result, trade-receipt, and recent-trades cards around a shared frame handling streaming states and the Runtime's `{ok,data}` / `{ok,error}` tool envelope; the generic renderer remains the fallback for all other tools. Completed per [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
+- **v0.2.1 — ETF Grid Chat Tool Cards**: in-chat custom renderers for the ETF Grid extension's four AG-UI tools, matched by stable tool name via CopilotKit v2 `useRenderTool` (zod parameter schemas) through a new `toolCards` extension extension point — status, pipeline-result, trade-receipt, and recent-trades cards around a shared frame handling streaming states and the Runtime's `{ok,data}` / `{ok,error}` tool envelope; the generic renderer remains the fallback for all other tools. Completed per [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](docs/plan/v0.2.1-etf-grid-chat-tool-cards.md).
 
 - **v0.2.0 — ETF Grid Frontend**: standalone grid status & trade ledger page backed by the Runtime's `etf_grid` REST API (base URL derived from `VITE_AGENT_ENDPOINT`) — status table with signal orders, gate state, and combined unrealized/realized P&L (Runtime v0.4.5); filterable, paginated ledger; record-trade modal with local preview, confirm step, and unified 422 rendering. Completed per [`docs/plan/v0.2.0-etf-grid-frontend.md`](docs/plan/v0.2.0-etf-grid-frontend.md).
 
 - **v0.1.4 — AG-UI 1.0 & CopilotKit 1.77 Upgrade**: paired upgrade onto the AG-UI 1.0 packages (`@ag-ui/client` pinned exactly to CopilotKit's pin, currently 1.0.2; `@copilotkit/react-core` ^1.77.2), Intelligence indicator opted out, paired-upgrade convention documented for Dependabot solo bumps. Completed per [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md).
 
-- **v0.1.3 — Internationalization**: react-i18next with namespace-per-plugin — core `common` namespace plus plugin manifests contributing their own locale bundles via `defineLocales`, all registered synchronously at init; UI ships English only, additional locales are data-only follow-ups. Completed per [`docs/plan/v0.1.3-i18n.md`](docs/plan/v0.1.3-i18n.md).
+- **v0.1.3 — Internationalization**: react-i18next with namespace-per-extension — core `common` namespace plus extension manifests contributing their own locale bundles via `defineLocales`, all registered synchronously at init; UI ships English only, additional locales are data-only follow-ups. Completed per [`docs/plan/v0.1.3-i18n.md`](docs/plan/v0.1.3-i18n.md).
 
-- **v0.1.2 — Plugin Framework**: extension-point-based plugin architecture — self-contained plugin directories under `src/plugins/`, typed `definePlugin` contract, build-time auto-discovery via `import.meta.glob` — validated by a blank ETF Grid plugin page. Completed per [`docs/plan/v0.1.2-plugin-framework.md`](docs/plan/v0.1.2-plugin-framework.md).
+- **v0.1.2 — Extension Framework**: extension-point-based extension architecture — self-contained extension directories under `src/extensions/`, typed `defineExtension` contract, build-time auto-discovery via `import.meta.glob` — validated by a blank ETF Grid extension page. Completed per [`docs/plan/v0.1.2-plugin-framework.md`](docs/plan/v0.1.2-plugin-framework.md).
 
-- **v0.1.1 — App Shell**: shadcn/ui sidebar shell (brand row, upper nav, Plugins group, recent-conversations group, user area), official Neutral theme tokens with dark default, navigation registry in `src/nav.ts`. Completed per [`docs/plan/v0.1.1-app-shell.md`](docs/plan/v0.1.1-app-shell.md).
+- **v0.1.1 — App Shell**: shadcn/ui sidebar shell (brand row, upper nav, Extensions group, recent-conversations group, user area), official Neutral theme tokens with dark default, navigation registry in `src/nav.ts`. Completed per [`docs/plan/v0.1.1-app-shell.md`](docs/plan/v0.1.1-app-shell.md).
 - **v0.1.0 — MVP**: one page, one chat: streaming over AG-UI, built-in generic tool-call renderer, `thread_id` persisted in `localStorage` with a "New conversation" button. Completed per [`docs/plan/v0.1.0-mvp-chat-client.md`](docs/plan/v0.1.0-mvp-chat-client.md).
 
 ### 3.3 Explicitly Out of Scope

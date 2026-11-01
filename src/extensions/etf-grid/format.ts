@@ -1,5 +1,5 @@
 /**
- * Presentation formatting for the ETF Grid plugin: display strings and
+ * Presentation formatting for the ETF Grid extension: display strings and
  * semantic color classes. Money arrives as strings; formatting for
  * display (thousand separators) is the only place values pass through
  * Number — never arithmetic.

@@ -32,11 +32,26 @@ cp .env.example .env
 | `VITE_LOGTO_ENDPOINT` | `http://localhost:3001` | Base URL of the Logto IdP (OIDC issuer: `<endpoint>/oidc`) |
 | `VITE_LOGTO_APP_ID` | `20vb1euxbpw6m8nqdgkxs` | App ID of this SPA registered in the Logto Console |
 | `VITE_LOGTO_API_RESOURCE` | `https://spectres.runtime/api` | API resource indicator; the Runtime only accepts JWT access tokens issued for this audience |
+| `VITE_LOGTO_ADMIN_ENDPOINT` | `http://localhost:3002` | Logto Console linked from the admin console for account, role, and assignment management |
 
 This is the only configuration mechanism, in development and production
 alike. No API keys or secrets are needed anywhere in this app — the Logto
 App ID is a public client identifier, and tokens live only inside the Logto
 SDK.
+
+## Role-specific experiences
+
+The app decodes the Runtime API access token's `scopes` claim to choose the
+product surface. Users with `agent_os:admin` see only the management console;
+ordinary users see the existing assistant and extensions. This controls
+presentation only — the Runtime remains the authorization boundary.
+
+The admin console reads `/info` and manages Runtime directory users through
+`/users`. The directory is JIT-provisioned after a user's first valid Runtime
+request, so it is not a complete Logto account list. Disabling a directory
+user blocks Runtime access immediately but neither suspends the Logto account
+nor revokes tokens. Accounts, Logto roles, and assignments remain in Logto
+Console.
 
 ## Development
 
@@ -65,6 +80,7 @@ must include the origin you serve `dist/` from (e.g. `http://localhost:8080`).
 ```bash
 npm run lint        # oxlint
 npm run typecheck   # tsc -b
+npm run build       # production bundle
 ```
 
 ## Troubleshooting
@@ -81,9 +97,10 @@ npm run typecheck   # tsc -b
 src/
 ├── main.tsx            # entry; mounts LogtoProvider + AuthGate, imports styles
 ├── app.tsx             # view state, CopilotKit provider, AppShell wiring
-├── nav.ts              # typed sidebar registry (nav, plugins, recent)
-├── ag-ui.ts            # HttpAgent wiring + endpoint resolution (Bearer token per request)
-├── auth.ts             # Logto config (VITE_LOGTO_*) + module-level token plumbing
+├── nav.ts              # typed sidebar registry (nav, extensions, recent)
+├── ag-ui.ts            # HttpAgent wiring (Bearer token per request)
+├── auth.ts             # Logto config, JWT claims decoding, and token plumbing
+├── admin-api.ts        # Runtime /info and UserDirectory API contracts
 ├── thread.ts           # thread_id localStorage helpers
 ├── components/
 │   ├── app-shell.tsx   # sidebar frame (shadcn Sidebar primitives)
@@ -92,8 +109,10 @@ src/
 ├── hooks/
 │   └── use-mobile.ts   # vendored shadcn hook (sidebar)
 ├── lib/
+│   ├── runtime-api.ts  # shared Runtime URL, Bearer requests, and API errors
 │   └── utils.ts        # cn() class-merge helper
 ├── pages/
+│   ├── admin-page.tsx  # admin-only system overview and directory management
 │   └── chat-page.tsx   # chat view: prebuilt chat + tool renderer
 └── index.css           # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```

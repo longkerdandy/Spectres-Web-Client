@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { CopilotChat, useDefaultRenderTool } from "@copilotkit/react-core/v2";
 import type { CopilotChatLabels } from "@copilotkit/react-core/v2";
 import { useTranslation } from "react-i18next";
-import { toolCardComponents } from "@/plugins";
+import { toolCardComponents } from "@/extensions";
 
 /** Keys of `CopilotChatLabels` sourced from the `common` namespace. */
 const LABEL_KEYS = [
@@ -28,7 +28,7 @@ const LABEL_KEYS = [
   "welcomeMessageText",
 ] as const satisfies readonly (keyof CopilotChatLabels)[];
 
-/** Plugin tool-card registrars are build-time static; scan once. */
+/** Extension tool-card registrars are build-time static; scan once. */
 const TOOL_CARDS = toolCardComponents();
 
 export default function ChatPage() {
@@ -45,7 +45,7 @@ export default function ChatPage() {
 
   return (
     <>
-      {/* Plugin-contributed tool-card registrars; render nothing themselves. */}
+      {/* Extension-contributed tool-card registrars; render nothing themselves. */}
       {TOOL_CARDS.map((ToolCards, index) => (
         <ToolCards key={index} />
       ))}
