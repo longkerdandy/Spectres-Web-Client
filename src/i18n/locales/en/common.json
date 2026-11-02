@@ -4,8 +4,25 @@
     "scheduledTasks": "Scheduled tasks",
     "scheduledTasksBadge": "Soon",
     "extensions": "Extensions",
-    "recent": "Recent",
-    "currentConversation": "Current conversation"
+    "recent": "Recent"
+  },
+  "session": {
+    "untitled": "Untitled conversation",
+    "actions": "Conversation actions",
+    "rename": "Rename",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "deleting": "Deleting…",
+    "retry": "Retry",
+    "empty": "No conversations yet.",
+    "loadError": "Could not load conversations.",
+    "renameTitle": "Rename conversation",
+    "renameDescription": "Enter a new name for this conversation.",
+    "renamePlaceholder": "Conversation name",
+    "deleteTitle": "Delete conversation?",
+    "deleteDescription": "Delete \"{{name}}\"? This cannot be undone."
   },
   "auth": {
     "loading": "Loading…",

@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-11-01 · Covers: v0.3.1 (Minimal Admin Console)
+> Last updated: 2026-11-02 · Covers: v0.4.0 (Conversation History)
 
 ---
 
@@ -153,9 +153,10 @@ The thinnest layer — everything above is library code:
   a thread agent, or extension views.
 - **App shell** (`src/components/app-shell.tsx`): the sidebar frame built
   from shadcn Sidebar primitives. Assistant mode has the upper nav, Extensions,
-  and Recent groups; admin mode exposes only the management entry. Both
-  modes share the brand, collapse behavior, user area, and sign-out flow. All
-  copy is resolved from the i18n layer (§4).
+  and a Runtime-backed Recent group listing the user's sessions with
+  switch/rename/delete actions; admin mode exposes only the management entry.
+  Both modes share the brand, collapse behavior, user area, and sign-out flow.
+  All copy is resolved from the i18n layer (§4).
 - **AdminPage** (`src/pages/admin-page.tsx`): reads public `/info` for the
   Runtime name, AgentOS instance version, Agno version, auth mode, and user
   isolation; lists and updates the Runtime UserDirectory through `/users`.
@@ -163,9 +164,12 @@ The thinnest layer — everything above is library code:
   rather than Spectres release versions, paginates with response `meta`, and
   keeps enable/disable pending, confirmation, self-disable, and error states.
 - **Navigation registry** (`src/nav.ts`): core sidebar entries are typed
-  data (`NavItem` / `ExtensionGroup` / `RecentConversation`) holding
-  translation **keys**, not copy. Extension entries are **not** registered
-  here — they come from the extension framework (§3).
+  data (`NavItem` / `ExtensionGroup`) holding translation **keys**, not copy.
+  Extension entries are **not** registered here — they come from the extension
+  framework (§3). The Recent group is dynamic session data, not static nav data.
+- **Session API** (`src/sessions-api.ts`): typed wrappers over Agno AgentOS's
+  built-in `/sessions` endpoints (list, rename, delete), built on the shared
+  `runtimeRequest` helper. AG-UI `thread_id` maps 1:1 to Runtime `session_id`.
 - **View state**: no router; the active view (`ViewId`) is local React
   state in `app.tsx` — the `"chat"` literal widened to include any
   extension-contributed view id. The chat page stays mounted (hidden) while
@@ -175,10 +179,13 @@ The thinnest layer — everything above is library code:
   and maps the SDK's chat labels from `common` namespace keys.
 - **`thread.ts`**: `thread_id` helpers — read from `localStorage` on load
   (conversation resumes from the Runtime's PostgreSQL session store),
-  generate and persist a fresh id on New chat. The only durable
-  client-side state besides the i18n language preference (§4). The
-  `CopilotKit` provider keeps its `key={threadId}` remount mechanism from
-  v0.1.0.
+  generate and persist a fresh id on New chat, and persist the id when the
+  user switches sessions. The only durable client-side state besides the i18n
+  language preference (§4). The `CopilotKit` provider keeps its
+  `key={threadId}` remount mechanism from v0.1.0, so switching sessions replays
+  history through AG-UI. New chats do not appear in the sidebar until their
+  first run is persisted; `ChatPage` subscribes to the agent's
+  `onRunFinalized` event and triggers a session-list refresh at that point.
 
 ## 3. Extension Framework
 
@@ -355,7 +362,7 @@ though the client uses token claims to select its presentation.
 | UI components | shadcn/ui vendored in `src/components/ui/`, Radix primitives, lucide-react icons | App shell (not the chat surface) |
 | Internationalization | react-i18next; `common` + per-extension namespaces, all bundles registered synchronously at init | All UI copy |
 | Navigation | Role-selected top-level surface at the auth gate; assistant `ViewId` remains local state (no router) | Auth gate, app shell |
-| Thread persistence | `localStorage` via `thread.ts`; assistant surface only | App code → agent connection |
+| Thread management | Active `thread_id` in `localStorage` via `thread.ts`; session list from Runtime `/sessions` | App code → agent connection + Runtime session API |
 | Runtime REST APIs | Shared authenticated `runtimeRequest`; extension/admin modules retain typed contracts | Admin and extension pages → Runtime |
 | Chat tool cards | Extension-contributed `useRenderTool` registrars (zod parameter schemas); shared `{ok,data}`/`{ok,error}` envelope parser in `src/lib/tool-result.ts` | Chat stream → Runtime tools |
 | Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring + Runtime API base derivation |
@@ -380,7 +387,7 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 8. Source Layout (v0.3.1)
+## 8. Source Layout (v0.4.0)
 
 ```text
 src/
@@ -390,6 +397,7 @@ src/
 ├── ag-ui.ts               # HttpAgent wiring; per-request Bearer token via custom fetch
 ├── auth.ts                # Logto config, safe JWT claims decoding, token getter / re-auth plumbing
 ├── admin-api.ts           # typed /info and UserDirectory REST contracts
+├── sessions-api.ts        # typed /sessions list, rename, and delete contracts
 ├── thread.ts              # thread_id localStorage helpers
 ├── i18n/
 │   ├── index.ts           # i18next init: language resolution, resource assembly
@@ -449,9 +457,9 @@ a runtime dependency boundary.
   connection error; admin cards show retryable request errors. A 403 gets a
   specific access-denied state and is never retried. README documents
   checking `VITE_AGENT_ENDPOINT` and the Runtime's CORS allowlist.
-- **Stale thread id** (session deleted server-side): starting a new
-  conversation is the documented recovery; no automatic retry logic in
-  v0.1.0.
+- **Stale thread id** (session deleted server-side or by another client):
+  starting a new conversation or picking another session from the sidebar is
+  the documented recovery; no automatic retry logic.
 - No retry queues, offline handling, or error boundaries beyond the SDK
   defaults in this milestone.
 
@@ -471,7 +479,7 @@ a runtime dependency boundary.
 | Additional locales (e.g. zh-CN) | Data-only: new `*.json` files + `SUPPORTED_LANGUAGES`/`coreResources` entries; the language switcher UI arrives with the second locale |
 | Custom dispatch/tool cards | Custom renderer registrations on the existing shadcn/ui base |
 | HITL confirmations | SDK's HITL hooks + confirmation card components |
-| Thread list / management | Real entries in the shell's Recent group + thread metadata from the Runtime; may add a router |
+| Thread search / archiving | Filter and archive actions on the existing Runtime-backed session list |
 | Per-Slave transparency | Consume Runtime's custom AG-UI events (Runtime ADR 0004 phase 2); subtask UI |
 | Remote/cloud deployment | Only `VITE_AGENT_ENDPOINT` changes (Runtime ADR 0005) |
 | Tests | Introduce vitest when component logic outgrows manual walkthroughs |
@@ -479,7 +487,8 @@ a runtime dependency boundary.
 ## 12. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.3.1-admin-console.md`](plan/v0.3.1-admin-console.md) — current milestone plan
+- [`docs/plan/v0.4.0-conversation-history.md`](plan/v0.4.0-conversation-history.md) — current milestone plan
+- [`docs/plan/v0.3.1-admin-console.md`](plan/v0.3.1-admin-console.md) — admin console milestone plan
 - [`docs/plan/v0.3.0-user-login.md`](plan/v0.3.0-user-login.md) — User Login milestone plan
 - [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](plan/v0.2.1-etf-grid-chat-tool-cards.md) — ETF Grid tool cards milestone plan
 - [`docs/plan/v0.2.0-etf-grid-frontend.md`](plan/v0.2.0-etf-grid-frontend.md) — ETF Grid frontend milestone plan

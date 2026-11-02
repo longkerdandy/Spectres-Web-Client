@@ -21,3 +21,7 @@ export function createAgent(threadId: string): HttpAgent {
     fetch: authenticatedFetch,
   });
 }
+
+export function setAgentThreadId(agent: HttpAgent, threadId: string): void {
+  agent.threadId = threadId;
+}

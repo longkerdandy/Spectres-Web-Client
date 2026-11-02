@@ -2,7 +2,7 @@
 
 > This document is for coding agents working on the project. It defines the project background, the position of this subproject within the Spectres system, its scope, and its development conventions.
 >
-> Last updated: 2026-11-01
+> Last updated: 2026-11-02
 
 ---
 
@@ -50,14 +50,16 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 1. **Conversation UI**: streaming chat with the Master Agent, message history rendering, markdown display.
 2. **Agent activity visibility**: tool-call rendering (generic cards now; dispatch cards and per-Slave expandable subtasks later, per Runtime ADR 0004).
 3. **Human-in-the-loop**: confirmation UIs for sensitive agent actions (once the Runtime registers confirmation-gated tools).
-4. **Thread management**: continue, list, and start conversations backed by the Runtime's session store.
+4. **Thread management**: list, continue, start, rename, and delete conversations backed by the Runtime's session store.
 5. **Proactive updates** (future): a notification/updates stream for automation results, separate from the chat thread (Runtime ADR 0003).
 
 ### 3.2 Current Milestone
 
-- **v0.3.1 — Minimal Admin Console**: JWT `scopes`-derived role views with a management-only console for `agent_os:admin` administrators; public Runtime system overview and paginated Runtime UserDirectory enable/disable, with no chat or AG-UI surface mounted in admin mode. Ordinary users retain the existing assistant experience. Implementation follows [`docs/plan/v0.3.1-admin-console.md`](docs/plan/v0.3.1-admin-console.md).
+- **v0.4.0 — Conversation History**: Runtime-backed session list in the sidebar; users can switch between historical conversations, start new chats, and rename or delete sessions. New conversations appear in the sidebar only after their first message is persisted. Implementation follows [`docs/plan/v0.4.0-conversation-history.md`](docs/plan/v0.4.0-conversation-history.md).
 
 ### 3.2.1 Completed Milestones
+
+- **v0.3.1 — Minimal Admin Console**: JWT `scopes`-derived role views with a management-only console for `agent_os:admin` administrators; public Runtime system overview and paginated Runtime UserDirectory enable/disable, with no chat or AG-UI surface mounted in admin mode. Ordinary users retain the existing assistant experience. Completed per [`docs/plan/v0.3.1-admin-console.md`](docs/plan/v0.3.1-admin-console.md).
 
 - **v0.3.0 — User Login**: Logto OIDC sign-in gate for the SPA, JWT access token (resource `https://spectres.runtime/api`) attached as Bearer to AG-UI and extension REST calls, sign-out in the shell. Completed per [`docs/plan/v0.3.0-user-login.md`](docs/plan/v0.3.0-user-login.md).
 

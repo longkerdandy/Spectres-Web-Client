@@ -1,5 +1,5 @@
 import type { LucideIcon } from "lucide-react";
-import { Clock, MessageSquare, Puzzle, SquarePen } from "lucide-react";
+import { Clock, Puzzle, SquarePen } from "lucide-react";
 
 /**
  * Navigation data model for the app shell.
@@ -38,15 +38,6 @@ export interface ExtensionGroup {
   icon: LucideIcon;
 }
 
-export interface RecentConversation {
-  id: string;
-  /** Translation key in the `common` namespace. */
-  titleKey: string;
-  /** Shown when the sidebar collapses to icon mode. */
-  icon: LucideIcon;
-  view: ViewId;
-}
-
 export const primaryNav: NavItem[] = [
   {
     id: "new-chat",
@@ -70,7 +61,4 @@ export const extensionGroup: ExtensionGroup = {
   icon: Puzzle,
 };
 
-/** Only the current conversation is real; history arrives with thread management. */
-export const recentConversations: RecentConversation[] = [
-  { id: "current", titleKey: "nav.currentConversation", icon: MessageSquare, view: "chat" },
-];
+
