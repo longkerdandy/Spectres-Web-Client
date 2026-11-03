@@ -1,6 +1,5 @@
 import {
   RuntimeApiError,
-  runtimeBaseUrl,
   runtimeRequest,
 } from "@/lib/runtime-api";
 import type {
@@ -21,7 +20,7 @@ import type {
  * configuration.
  */
 
-const API_BASE = `${runtimeBaseUrl}/api/v1/extensions/etf-grid`;
+const API_BASE = "/api/v1/extensions/etf-grid";
 
 /** Request failure; `validation` carries the unified 422 `detail[]` items. */
 export class ApiError extends Error {
