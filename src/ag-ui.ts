@@ -1,13 +1,8 @@
 import { HttpAgent } from "@ag-ui/client";
 import { accessToken } from "./auth";
+import { agentEndpoint } from "./lib/runtime-api";
 
 export const AGENT_ID = "default";
-
-const DEFAULT_ENDPOINT = "http://localhost:7777/agui";
-
-export function agentEndpoint(): string {
-  return import.meta.env.VITE_AGENT_ENDPOINT ?? DEFAULT_ENDPOINT;
-}
 
 async function authenticatedFetch(
   url: string,
@@ -25,4 +20,8 @@ export function createAgent(threadId: string): HttpAgent {
     threadId,
     fetch: authenticatedFetch,
   });
+}
+
+export function setAgentThreadId(agent: HttpAgent, threadId: string): void {
+  agent.threadId = threadId;
 }

@@ -5,17 +5,18 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-10-22 · Covers: v0.3.0 (User Login)
+> Last updated: 2026-11-02 · Covers: v0.4.0 (Conversation History)
 
 ---
 
 ## 1. Overview
 
-Spectres-Web-Client is a **static single-page application** that lets the
-user chat with the Spectres Runtime Master Agent over AG-UI. It has no
-backend of its own: the build output (`dist/`) is plain HTML/JS/CSS that any
-HTTP server can host, and the browser talks directly to the Runtime's AG-UI
-endpoint.
+Spectres-Web-Client is a **static single-page application** with two
+role-selected product surfaces. Ordinary users chat with the Spectres Runtime
+Master Agent over AG-UI; administrators with the Runtime JWT's
+`agent_os:admin` scope see a management-only console. It has no backend of
+its own: the build output (`dist/`) is plain HTML/JS/CSS that any HTTP server
+can host, and the browser talks directly to the Runtime.
 
 ![Spectres Web Client frontend architecture](assets/frontend-architecture.svg)
 
@@ -50,10 +51,12 @@ The UI framework. Bundled by Vite; strict TypeScript throughout.
 
 ### 2.4 AG-UI protocol client — `@ag-ui/client` `HttpAgent`
 
-The wire layer. POSTs `RunAgentInput` to the configured endpoint and
+The chat wire layer. POSTs `RunAgentInput` to the configured endpoint and
 consumes the SSE event stream (text deltas, tool-call lifecycle, state
-snapshots, run lifecycle). It is the app's *only* network dependency and
-the only place the Runtime is reachable.
+snapshots, run lifecycle). Runtime REST APIs use the shared fetch layer in
+`src/lib/runtime-api.ts`; neither stack talks to any backend other than the
+Runtime. The AG-UI agent is constructed only inside the ordinary-user
+surface, so admin mode makes no `/agui` requests.
 
 Note: `@ag-ui/client` is a **separate MIT package** maintained by the
 `ag-ui-protocol` organization — not part of the CopilotKit SDK. It is the
@@ -103,7 +106,7 @@ Sits on React and the AG-UI client. Four pieces are used:
   (`"*"`) fallback for every tool without a named renderer.
 - **custom tool-call renderers** (`useRenderTool` from the v2 surface,
   since v0.2.1): name-matched cards registered per Runtime tool, taking
-  precedence over the wildcard fallback. Registration is a plugin
+  precedence over the wildcard fallback. Registration is a extension
   extension point (§3); the v2 API requires a Standard Schema (zod) for
   each tool's `parameters` and delivers render props as a discriminated
   union on `status` (`inProgress` / `executing` / `complete`), with the
@@ -142,58 +145,75 @@ colors**: only the official palette; the root element carries `class="dark"`
 
 The thinnest layer — everything above is library code:
 
+- **Role boundary** (`src/components/auth-gate.tsx`): owns the in-memory
+  `loading | user | admin` state and current token `sub`. While loading it
+  renders only the shared loading screen. Admin and ordinary surfaces are
+  mutually exclusive mounts; a role change unmounts the old surface before
+  the new one appears. Admin mode never mounts `App`, `ChatPage`, CopilotKit,
+  a thread agent, or extension views.
 - **App shell** (`src/components/app-shell.tsx`): the sidebar frame built
-  from shadcn Sidebar primitives — brand row with collapse trigger, upper
-  nav (New chat, Scheduled tasks placeholder, Plugins collapsible group),
-  Recent group with the current conversation, user area at the bottom —
-  plus the main content area rendering the active view. Sidebar collapse
-  uses the library's icon mode, so the rail keeps icons reachable when
-  collapsed. All copy is resolved from the i18n layer (§4).
+  from shadcn Sidebar primitives. Assistant mode has the upper nav, Extensions,
+  and a Runtime-backed Recent group listing the user's sessions with
+  switch/rename/delete actions; admin mode exposes only the management entry.
+  Both modes share the brand, collapse behavior, user area, and sign-out flow.
+  All copy is resolved from the i18n layer (§4).
+- **AdminPage** (`src/pages/admin-page.tsx`): reads public `/info` for the
+  Runtime name, AgentOS instance version, Agno version, auth mode, and user
+  isolation; lists and updates the Runtime UserDirectory through `/users`.
+  The page distinguishes directory users from Logto accounts, labels AgentOS
+  rather than Spectres release versions, paginates with response `meta`, and
+  keeps enable/disable pending, confirmation, self-disable, and error states.
 - **Navigation registry** (`src/nav.ts`): core sidebar entries are typed
-  data (`NavItem` / `PluginGroup` / `RecentConversation`) holding
-  translation **keys**, not copy. Plugin entries are **not** registered
-  here — they come from the plugin framework (§3).
+  data (`NavItem` / `ExtensionGroup`) holding translation **keys**, not copy.
+  Extension entries are **not** registered here — they come from the extension
+  framework (§3). The Recent group is dynamic session data, not static nav data.
+- **Session API** (`src/sessions-api.ts`): typed wrappers over Agno AgentOS's
+  built-in `/sessions` endpoints (list, rename, delete), built on the shared
+  `runtimeRequest` helper. AG-UI `thread_id` maps 1:1 to Runtime `session_id`.
 - **View state**: no router; the active view (`ViewId`) is local React
   state in `app.tsx` — the `"chat"` literal widened to include any
-  plugin-contributed view id. The chat page stays mounted (hidden) while
-  a plugin view is shown, so the conversation survives view switches.
+  extension-contributed view id. The chat page stays mounted (hidden) while
+  a extension view is shown, so the conversation survives view switches.
 - **ChatPage**: composes the prebuilt chat component, enables the generic
-  tool renderer, mounts the plugin-contributed tool-card registrars (§3),
+  tool renderer, mounts the extension-contributed tool-card registrars (§3),
   and maps the SDK's chat labels from `common` namespace keys.
 - **`thread.ts`**: `thread_id` helpers — read from `localStorage` on load
   (conversation resumes from the Runtime's PostgreSQL session store),
-  generate and persist a fresh id on New chat. The only durable
-  client-side state besides the i18n language preference (§4). The
-  `CopilotKit` provider keeps its `key={threadId}` remount mechanism from
-  v0.1.0.
+  generate and persist a fresh id on New chat, and persist the id when the
+  user switches sessions. The only durable client-side state besides the i18n
+  language preference (§4). The `CopilotKit` provider keeps its
+  `key={threadId}` remount mechanism from v0.1.0, so switching sessions replays
+  history through AG-UI. New chats do not appear in the sidebar until their
+  first run is persisted; `ChatPage` subscribes to the agent's
+  `onRunFinalized` event and triggers a session-list refresh at that point.
 
-## 3. Plugin Framework
+## 3. Extension Framework
 
 Runtime extensions keep multiplying (`spectres/extensions/` packages with
 `name` + `register(ctx)`, discovered via `pkgutil`); the client mirrors
-that idea with its own build-time plugin mechanism so the shell never
+that idea with its own build-time extension mechanism so the shell never
 hand-registers a Runtime-extension entry again.
 
-- **Plugin = one self-contained directory** under `src/plugins/<id>/`,
+- **Extension = one self-contained directory** under `src/extensions/<id>/`,
   holding its own views, API client, types, components, and locale files.
-  Nothing about a plugin lives outside its directory.
-- **Contract** (`src/plugins/types.ts`): `definePlugin({ id, contributes })`.
+  Nothing about a extension lives outside its directory.
+- **Contract** (`src/extensions/types.ts`): `defineExtension({ id, contributes })`.
   `contributes` is an **extension-point bag** — the platform defines typed
-  points (`navItems` for the sidebar Plugins group, `views` for main-area
+  points (`navItems` for the sidebar Extensions group, `views` for main-area
   pages, `locales` for translation bundles, `toolCards` for chat
-  tool-card renderers) and plugins declare contributions. New points are
-  new optional fields, so existing plugins never change when the platform
-  grows one. Plugin ids match the Runtime extension name
+  tool-card renderers) and extensions declare contributions. New points are
+  new optional fields, so existing extensions never change when the platform
+  grows one. Extension ids match the Runtime extension name
   (`etf-grid` ↔ `etf_grid`).
-- **Discovery** (`src/plugins/index.ts`): `import.meta.glob("./*/index.ts",
-  { eager: true })` — every plugin directory's manifest is bundled at
-  build time. This is the platform's **only** scan of the plugins tree;
+- **Discovery** (`src/extensions/index.ts`): `import.meta.glob("./*/index.ts",
+  { eager: true })` — every extension directory's manifest is bundled at
+  build time. This is the platform's **only** scan of the extensions tree;
   everything else (nav items, views, locale bundles, tool cards) arrives
   through the typed manifest. Presence in the tree is the only opt-in (no
   enable/disable gating), and a wrong-shaped manifest fails
-  `npm run typecheck` through `definePlugin` — fail-loud, never silently
+  `npm run typecheck` through `defineExtension` — fail-loud, never silently
   degraded. The registry aggregates contributions by extension point:
-  `navItems()` (each entry carrying its plugin's i18n namespace),
+  `navItems()` (each entry carrying its extension's i18n namespace),
   `viewFor(id)`, and `toolCardComponents()`.
 - **Tool cards** (since v0.2.1): a `toolCards` entry is a registrar
   component that calls CopilotKit's `useRenderTool` once per Runtime tool
@@ -204,24 +224,23 @@ hand-registers a Runtime-extension entry again.
   §6.5 envelope (`{ok, data}` / `{ok, error}`), parsed by the shared
   platform helper `src/lib/tool-result.ts`. Tool payloads are bare
   objects/arrays — the REST pagination envelope does not apply — so
-  plugins keep tool-response types separate from their REST types.
-- **Adding a plugin**: create `src/plugins/<id>/index.ts` (default-export
-  `definePlugin({...})`) plus its view component — zero edits outside the
+  extensions keep tool-response types separate from their REST types.
+- **Adding a extension**: create `src/extensions/<id>/index.ts` (default-export
+  `defineExtension({...})`) plus its view component — zero edits outside the
   new directory. The sidebar entry and main-area routing appear on the
   next build.
 - **Deliberately absent**: runtime loading / Module Federation (single
-  user, single repo — plugins ship with the app), lazy loading (eager
-  glob; revisit when bundle size forces it), `PluginContext` injection
-  (v0.2.0's API client derives its base URL from `VITE_AGENT_ENDPOINT`
-  directly, so no shared context was needed after all), npm-distributed
-  third-party plugins.
+  user, single repo — extensions ship with the app), lazy loading (eager
+  glob; revisit when bundle size forces it), `ExtensionContext` injection,
+  npm-distributed third-party extensions.
 
-The first plugin, `etf-grid`, is the proving ground: its page talks to the
+The first extension, `etf-grid`, is the proving ground: its page talks to the
 Runtime extension's REST API (grid status, sync/recompute actions, trade
 ledger, manual trade recording), and its tool cards render the extension's
 four AG-UI tools inside the chat stream. Everything lives inside
-`src/plugins/etf-grid/`: a typed `fetch` client (`api.ts`, base URL
-derived from `VITE_AGENT_ENDPOINT`; contract types in `types.ts`), the
+`src/extensions/etf-grid/`: a typed API client (`api.ts`, built on the shared
+Runtime request layer and retaining extension-specific 422 mapping; contract
+types in `types.ts`), the
 page components, BigInt-backed decimal helpers for the local amount
 preview (`money.ts` — no float math on money), display formatting
 (`format.ts`), the tool cards (`tool-cards/` — one card per tool around a
@@ -233,13 +252,13 @@ in `tool-types.ts`), and its `locales/` bundles.
 
 All user-facing copy lives in keyed locale resources; nothing is
 hardcoded in components. The UI currently ships **English only** — the
-infrastructure (language resolution, persistence, plugin namespaces) is
+infrastructure (language resolution, persistence, extension namespaces) is
 complete, so a new language is a data-only addition.
 
 - **Library**: react-i18next (`i18next` + `initReactI18next`). Chosen over
   a hand-rolled context/dictionary for its interpolation, pluralization,
   fallback chain, and its **namespace** model, which maps 1:1 onto the
-  plugin architecture.
+  extension architecture.
 - **Core** (`src/i18n/index.ts`): `SUPPORTED_LANGUAGES` is the single
   supported-language list (`["en"]` today; the first entry is the
   default). Resolution order at startup:
@@ -247,30 +266,30 @@ complete, so a new language is a data-only addition.
   resolved language is persisted and mirrored to
   `document.documentElement.lang`; both update on `languageChanged`.
 - **Namespaces**: `common` for the core shell (nav, user area, chat
-  labels); each plugin's namespace equals its manifest `id`
+  labels); each extension's namespace equals its manifest `id`
   (`etf-grid`). Components resolve keys via `useTranslation(<ns>)`;
   cross-namespace references use `t("<ns>:<key>")`.
 - **Synchronous registration**: every supported language's bundles —
-  core plus each plugin manifest's `contributes.locales` — are folded
+  core plus each extension manifest's `contributes.locales` — are folded
   into one `resources` object passed to `i18next.init()`, which
   `main.tsx` imports before rendering. No async loading, no raw keys on
   first paint, and `changeLanguage()` switches instantly. Languages
-  outside `SUPPORTED_LANGUAGES` are ignored at init, so plugins may ship
+  outside `SUPPORTED_LANGUAGES` are ignored at init, so extensions may ship
   future locales early.
-- **Plugin locales** are a manifest contribution (§3): each plugin
+- **Extension locales** are a manifest contribution (§3): each extension
   bundles its own `locales/*.json` via
   `defineLocales(import.meta.glob("./locales/*.json", { eager: true, import: "default" }))`,
   registered under the namespace equal to its manifest `id` — the single
-  source of truth for plugin identity.
+  source of truth for extension identity.
 - **CopilotKit chat labels**: `chat-page.tsx` maps the SDK's
   `CopilotChatLabels` (input placeholder, welcome message, disclaimer,
   toolbar tooltips) from `common` keys, so the chat surface follows the
   active language too.
-- **Data files hold keys, not copy**: `src/nav.ts` and plugin manifests
+- **Data files hold keys, not copy**: `src/nav.ts` and extension manifests
   carry `labelKey` / `badgeKey` / `titleKey`; rendering components
   translate.
 - **Adding a language**: add `src/i18n/locales/<lang>/common.json`, plus
-  one entry in `SUPPORTED_LANGUAGES` and `coreResources`; plugins add
+  one entry in `SUPPORTED_LANGUAGES` and `coreResources`; extensions add
   their own `locales/<lang>.json`. No component changes.
 - **Deliberately absent**: language switcher UI (arrives with the second
   locale), type-safe translation keys, ICU MessageFormat, per-language
@@ -279,40 +298,60 @@ complete, so a new language is a data-only addition.
 
 ## 5. Authentication
 
-Since v0.3.0 the Runtime enforces JWT authentication on every endpoint
-except `/health` (Runtime ADR 0009). The app signs the user in against the
-self-hosted **Logto** IdP using the OIDC authorization-code flow with PKCE
-for public clients, via `@logto/react`:
+The Runtime enforces JWT authentication on protected endpoints. The app
+signs the user in against the self-hosted **Logto** IdP using the OIDC
+authorization-code flow with PKCE for public clients, via `@logto/react`:
 
 - **Configuration**: `VITE_LOGTO_ENDPOINT`, `VITE_LOGTO_APP_ID`, and
   `VITE_LOGTO_API_RESOURCE` (defaults `http://localhost:3001`, the
   registered SPA App ID, `https://spectres.runtime/api`) are resolved in
   `src/auth.ts`. The API resource indicator is essential — Logto only
   issues a JWT (rather than an opaque token the Runtime rejects) when the
-  token is requested for this audience.
-- **Provider & gate**: `main.tsx` wraps the app in `LogtoProvider`;
-  `AuthGate` (`src/components/auth-gate.tsx`) renders a loading state while
-  the SDK initializes, a minimal login screen when unauthenticated, and the
-  app once authenticated. The sign-in redirect lands on `/callback`, which
-  the gate detects by pathname (still no router) and completes via
-  `useHandleSignInCallback`, then returns to `/`.
+  token is requested for this audience. `VITE_LOGTO_ADMIN_ENDPOINT`
+  (default `http://localhost:3002`) is the independent Logto Console link;
+  it is never derived from the OIDC endpoint.
+- **Provider & gate**: `main.tsx` wraps the app in `LogtoProvider`.
+  `AuthGate` handles initialization, sign-in, and `/callback`, then owns
+  role resolution for authenticated users. It safely base64url-decodes the
+  API access-token payload without verifying it locally: `scopes` selects
+  `admin` only when the array contains `agent_os:admin`, and `sub` powers
+  the self-disable guard. Missing or malformed claims resolve to `user`;
+  an unresolved initial token remains `loading`. Decoded values are
+  presentation state only, never proof of permission.
 - **Token storage**: entirely inside the Logto SDK; the app never persists
-  tokens itself. Access tokens expire after 1h;
-  `getAccessToken(resource)` refreshes transparently via the refresh token.
+  tokens, decoded scopes, subject, or role state. Access tokens expire after
+  1h; `getAccessToken(resource)` refreshes transparently via the refresh
+  token.
 - **Token plumbing outside React**: `src/auth.ts` holds a module-level
-  token getter and re-auth handler, registered by an effect inside the
-  provider tree (`AuthBridge`), so non-component code (the AG-UI agent, the
-  plugin REST clients) can await a token. Failing to obtain a token twice
-  in a row triggers the re-auth handler (a `signIn` redirect).
+  token getter and re-auth handler, registered by `AuthBridge`. Every token
+  obtained through this getter — including an SDK-refreshed token — is also
+  published to the gate's single role-state owner, so role changes require
+  no polling or second token store. Failing to obtain a token twice in a row
+  triggers the re-auth handler (a `signIn` redirect).
 - **AG-UI calls**: `createAgent` passes a custom `fetch` to `HttpAgent`
   (`HttpAgentConfig.fetch` is invoked per request) that sets
   `Authorization: Bearer <token>` from a fresh `getAccessToken` call — one
   agent per thread is preserved, no `CopilotKit` remount, no lost chat
-  state.
-- **Extension REST calls**: the plugin `request()` wrapper attaches the
-  same Bearer token; a 401 response triggers the re-auth handler.
+  state. This path exists only in the ordinary-user surface.
+- **Runtime REST calls**: `src/lib/runtime-api.ts` derives the Runtime base
+  URL from `VITE_AGENT_ENDPOINT`, attaches the same Bearer token, parses
+  JSON errors, triggers one re-auth path on 401, and does not retry 403.
+  Admin and extension clients share this layer; ETF Grid alone maps its
+  unified 422 details. Admin list/update calls accept `AbortSignal` and
+  ignore stale completions after pagination or role/view changes.
 - **Sign out**: the shell's user area shows the name/email from
   `getIdTokenClaims()` and signs out via `signOut(postLogoutRedirectUri)`.
+
+### 5.1 Runtime directory boundary
+
+`GET /users?include_disabled=true&page=<n>&limit=20` returns only the
+Runtime's JIT-provisioned directory, not all Logto accounts. It carries no
+trustworthy Logto role data, so the admin page has no role column or role
+editor. `PATCH /users/{user_id}` sends only `disabled`; disabling denies the
+next Runtime request even with a valid token, but does not suspend the Logto
+account or revoke tokens. Account creation, roles, and assignments stay in
+the linked Logto Console. Runtime remains the authorization boundary even
+though the client uses token claims to select its presentation.
 
 ## 6. Cross-Cutting Concerns
 
@@ -321,13 +360,13 @@ for public clients, via `@logto/react`:
 | Styling | Tailwind CSS (plus the CopilotKit prebuilt stylesheet) | App shell, SDK components |
 | Theming | shadcn Neutral semantic tokens in `src/index.css` (`:root` + `.dark`); `.dark` on `<html>` | Shell and `[data-copilotkit]` chat surface |
 | UI components | shadcn/ui vendored in `src/components/ui/`, Radix primitives, lucide-react icons | App shell (not the chat surface) |
-| Internationalization | react-i18next; `common` + per-plugin namespaces, all bundles registered synchronously at init | All UI copy |
-| Navigation | Core registry in `src/nav.ts` + plugin registry in `src/plugins/`; active view is local state (no router) | App shell |
-| Thread persistence | `localStorage` via `thread.ts` | App code → agent connection |
-| Extension REST APIs | Plugin-local typed `fetch` clients; base URL derived from `VITE_AGENT_ENDPOINT` | Plugin pages → Runtime extensions |
-| Chat tool cards | Plugin-contributed `useRenderTool` registrars (zod parameter schemas); shared `{ok,data}`/`{ok,error}` envelope parser in `src/lib/tool-result.ts` | Chat stream → Runtime tools |
-| Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring + extension API base derivation |
-| Authentication | Logto OIDC via `@logto/react`; `VITE_LOGTO_*` env config; Bearer token per request on AG-UI + extension REST (§5) | All Runtime calls |
+| Internationalization | react-i18next; `common` + per-extension namespaces, all bundles registered synchronously at init | All UI copy |
+| Navigation | Role-selected top-level surface at the auth gate; assistant `ViewId` remains local state (no router) | Auth gate, app shell |
+| Thread management | Active `thread_id` in `localStorage` via `thread.ts`; session list from Runtime `/sessions` | App code → agent connection + Runtime session API |
+| Runtime REST APIs | Shared authenticated `runtimeRequest`; extension/admin modules retain typed contracts | Admin and extension pages → Runtime |
+| Chat tool cards | Extension-contributed `useRenderTool` registrars (zod parameter schemas); shared `{ok,data}`/`{ok,error}` envelope parser in `src/lib/tool-result.ts` | Chat stream → Runtime tools |
+| Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring + Runtime API base derivation |
+| Authentication | Logto OIDC via `@logto/react`; `VITE_LOGTO_*` env config; Bearer token per request; JWT `scopes`/`sub` role state (§5) | All protected Runtime calls |
 
 One configuration mechanism for all environments; no environment-detection
 branches anywhere in the code.
@@ -348,25 +387,27 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 8. Source Layout (v0.3.0)
+## 8. Source Layout (v0.4.0)
 
 ```text
 src/
 ├── main.tsx               # entry; imports i18n (sync init) + styles, mounts LogtoProvider + AuthGate
-├── app.tsx                # view state, CopilotKit provider, AppShell wiring
+├── app.tsx                # ordinary-user view state, CopilotKit provider, AppShell wiring
 ├── nav.ts                 # typed core sidebar registry (translation keys, not copy)
-├── ag-ui.ts               # HttpAgent wiring + endpoint resolution; per-request Bearer token via custom fetch
-├── auth.ts                # Logto config (VITE_LOGTO_*) + module-level token getter / re-auth plumbing
+├── ag-ui.ts               # HttpAgent wiring; per-request Bearer token via custom fetch
+├── auth.ts                # Logto config, safe JWT claims decoding, token getter / re-auth plumbing
+├── admin-api.ts           # typed /info and UserDirectory REST contracts
+├── sessions-api.ts        # typed /sessions list, rename, and delete contracts
 ├── thread.ts              # thread_id localStorage helpers
 ├── i18n/
 │   ├── index.ts           # i18next init: language resolution, resource assembly
 │   └── locales/
 │       └── en/
 │           └── common.json    # core `common` namespace (English)
-├── plugins/
-│   ├── types.ts           # plugin contract: definePlugin/defineLocales + extension points
+├── extensions/
+│   ├── types.ts           # extension contract: defineExtension/defineLocales + extension points
 │   ├── index.ts           # build-time discovery (import.meta.glob) + aggregation
-│   └── etf-grid/          # first plugin — grid page + chat tool cards
+│   └── etf-grid/          # first extension — grid page + chat tool cards
 │       ├── index.ts       # manifest (nav item + view + locales + toolCards)
 │       ├── api.ts         # typed fetch client; base URL from VITE_AGENT_ENDPOINT
 │       ├── types.ts       # mirror of the Runtime etf_grid REST contract
@@ -386,36 +427,39 @@ src/
 │       │   ├── receipt-card.tsx   # record_grid_trade
 │       │   └── trades-card.tsx    # list_grid_trades
 │       └── locales/
-│           └── en.json    # plugin `etf-grid` namespace (English)
+│           └── en.json    # extension `etf-grid` namespace (English)
 ├── components/
-│   ├── app-shell.tsx      # sidebar frame (shadcn Sidebar primitives) + user area (claims, sign out)
-│   ├── auth-gate.tsx      # loading / login / /callback screens; AuthBridge registers token plumbing
+│   ├── app-shell.tsx      # role-specific sidebar content + shared user area (claims, sign out)
+│   ├── auth-gate.tsx      # loading / login / callback + role state and token bridge
 │   └── ui/                # vendored shadcn/ui components
 ├── hooks/
 │   └── use-mobile.ts      # vendored shadcn hook (sidebar)
 ├── lib/
+│   ├── runtime-api.ts     # shared Runtime base URL, Bearer requests, and JSON errors
 │   ├── tool-result.ts     # Runtime tool envelope: {ok,data}/{ok,error} parser
 │   └── utils.ts           # cn() class-merge helper
 ├── pages/
+│   ├── admin-page.tsx     # management-only system overview + directory enable/disable
 │   └── chat-page.tsx      # chat view: chat + tool renderers + label mapping
 └── index.css              # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
-Deliberately absent: router, state-management library, API abstraction
-layer (CopilotKit *is* the abstraction), test scaffolding. The component
-library (shadcn/ui) is vendored source, not a runtime dependency boundary.
+Deliberately absent: router, state-management library, backend-for-frontend,
+test scaffolding. The component library (shadcn/ui) is vendored source, not
+a runtime dependency boundary.
 
 ## 9. Error Handling (MVP level)
 
 - **Unauthenticated / expired session**: token acquisition retries once,
-  then redirects to Logto sign-in; extension REST calls do the same on a
-  401 response (§5).
-- **Runtime unreachable / wrong endpoint**: the chat surface shows the
-  connection error surfaced by the SDK; README documents checking
-  `VITE_AGENT_ENDPOINT` and the Runtime's CORS allowlist.
-- **Stale thread id** (session deleted server-side): starting a new
-  conversation is the documented recovery; no automatic retry logic in
-  v0.1.0.
+  then redirects to Logto sign-in; all shared Runtime REST calls do the same
+  on a 401 response (§5).
+- **Runtime unreachable / wrong endpoint**: the chat surface shows the SDK
+  connection error; admin cards show retryable request errors. A 403 gets a
+  specific access-denied state and is never retried. README documents
+  checking `VITE_AGENT_ENDPOINT` and the Runtime's CORS allowlist.
+- **Stale thread id** (session deleted server-side or by another client):
+  starting a new conversation or picking another session from the sidebar is
+  the documented recovery; no automatic retry logic.
 - No retry queues, offline handling, or error boundaries beyond the SDK
   defaults in this milestone.
 
@@ -435,7 +479,7 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 | Additional locales (e.g. zh-CN) | Data-only: new `*.json` files + `SUPPORTED_LANGUAGES`/`coreResources` entries; the language switcher UI arrives with the second locale |
 | Custom dispatch/tool cards | Custom renderer registrations on the existing shadcn/ui base |
 | HITL confirmations | SDK's HITL hooks + confirmation card components |
-| Thread list / management | Real entries in the shell's Recent group + thread metadata from the Runtime; may add a router |
+| Thread search / archiving | Filter and archive actions on the existing Runtime-backed session list |
 | Per-Slave transparency | Consume Runtime's custom AG-UI events (Runtime ADR 0004 phase 2); subtask UI |
 | Remote/cloud deployment | Only `VITE_AGENT_ENDPOINT` changes (Runtime ADR 0005) |
 | Tests | Introduce vitest when component logic outgrows manual walkthroughs |
@@ -443,12 +487,14 @@ library (shadcn/ui) is vendored source, not a runtime dependency boundary.
 ## 12. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.3.0-user-login.md`](plan/v0.3.0-user-login.md) — current milestone plan
+- [`docs/plan/v0.4.0-conversation-history.md`](plan/v0.4.0-conversation-history.md) — current milestone plan
+- [`docs/plan/v0.3.1-admin-console.md`](plan/v0.3.1-admin-console.md) — admin console milestone plan
+- [`docs/plan/v0.3.0-user-login.md`](plan/v0.3.0-user-login.md) — User Login milestone plan
 - [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](plan/v0.2.1-etf-grid-chat-tool-cards.md) — ETF Grid tool cards milestone plan
 - [`docs/plan/v0.2.0-etf-grid-frontend.md`](plan/v0.2.0-etf-grid-frontend.md) — ETF Grid frontend milestone plan
 - [`docs/plan/v0.1.4-ag-ui-copilotkit-upgrade.md`](plan/v0.1.4-ag-ui-copilotkit-upgrade.md) — AG-UI 1.0 / CopilotKit upgrade milestone plan
 - [`docs/plan/v0.1.3-i18n.md`](plan/v0.1.3-i18n.md) — i18n milestone plan
-- [`docs/plan/v0.1.2-plugin-framework.md`](plan/v0.1.2-plugin-framework.md) — plugin framework milestone plan
+- [`docs/plan/v0.1.2-plugin-framework.md`](plan/v0.1.2-plugin-framework.md) — extension framework milestone plan
 - [`docs/plan/v0.1.1-app-shell.md`](plan/v0.1.1-app-shell.md) — app shell milestone plan
 - [`docs/plan/v0.1.0-mvp-chat-client.md`](plan/v0.1.0-mvp-chat-client.md) — MVP milestone plan
 - Runtime architecture: `../../Spectres-Runtime/docs/architecture.md`

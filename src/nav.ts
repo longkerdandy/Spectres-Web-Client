@@ -1,18 +1,18 @@
 import type { LucideIcon } from "lucide-react";
-import { Clock, MessageSquare, Puzzle, SquarePen } from "lucide-react";
+import { Clock, Puzzle, SquarePen } from "lucide-react";
 
 /**
  * Navigation data model for the app shell.
  *
- * Core entries (upper nav, the Plugins group header, recent conversations)
+ * Core entries (upper nav, the Extensions group header, recent conversations)
  * are registered here as plain data; the shell renders them generically.
- * Plugin entries are NOT registered here — they come from the plugin
- * registry (`src/plugins/`), discovered at build time.
+ * Extension entries are NOT registered here — they come from the extension
+ * registry (`src/extensions/`), discovered at build time.
  */
 
 /**
- * Core views are the `"chat"` literal; plugin views widen the type to any
- * string (ids come from plugin manifests). The `string & {}` keeps `"chat"`
+ * Core views are the `"chat"` literal; extension views widen the type to any
+ * string (ids come from extension manifests). The `string & {}` keeps `"chat"`
  * discoverable in autocomplete.
  */
 export type ViewId = "chat" | (string & {});
@@ -31,20 +31,11 @@ export interface NavItem {
   badgeKey?: string;
 }
 
-export interface PluginGroup {
+export interface ExtensionGroup {
   id: string;
   /** Translation key in the `common` namespace. */
   labelKey: string;
   icon: LucideIcon;
-}
-
-export interface RecentConversation {
-  id: string;
-  /** Translation key in the `common` namespace. */
-  titleKey: string;
-  /** Shown when the sidebar collapses to icon mode. */
-  icon: LucideIcon;
-  view: ViewId;
 }
 
 export const primaryNav: NavItem[] = [
@@ -63,14 +54,11 @@ export const primaryNav: NavItem[] = [
   },
 ];
 
-/** Group header only; the child entries come from the plugin registry. */
-export const pluginGroup: PluginGroup = {
-  id: "plugins",
-  labelKey: "nav.plugins",
+/** Group header only; the child entries come from the extension registry. */
+export const extensionGroup: ExtensionGroup = {
+  id: "extensions",
+  labelKey: "nav.extensions",
   icon: Puzzle,
 };
 
-/** Only the current conversation is real; history arrives with thread management. */
-export const recentConversations: RecentConversation[] = [
-  { id: "current", titleKey: "nav.currentConversation", icon: MessageSquare, view: "chat" },
-];
+

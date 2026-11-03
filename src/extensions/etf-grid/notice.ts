@@ -2,7 +2,7 @@
  * Notice-line builders for market-data sync and signal recompute outcomes.
  * Shared by the grid page's alert notices and the chat `refresh_grid_data`
  * tool card so wording and detail formats live in one place. All functions
- * are pure: callers pass the plugin-namespaced `t` and get display strings.
+ * are pure: callers pass the extension-namespaced `t` and get display strings.
  */
 
 import type { TFunction } from "i18next";

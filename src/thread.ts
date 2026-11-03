@@ -19,3 +19,7 @@ export function resetThreadId(): string {
   localStorage.setItem(STORAGE_KEY, id);
   return id;
 }
+
+export function saveThreadId(id: string): void {
+  localStorage.setItem(STORAGE_KEY, id);
+}

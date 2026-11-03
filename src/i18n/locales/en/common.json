@@ -3,14 +3,76 @@
     "newChat": "New chat",
     "scheduledTasks": "Scheduled tasks",
     "scheduledTasksBadge": "Soon",
-    "plugins": "Plugins",
-    "recent": "Recent",
-    "currentConversation": "Current conversation"
+    "extensions": "Extensions",
+    "recent": "Recent"
+  },
+  "session": {
+    "untitled": "Untitled conversation",
+    "actions": "Conversation actions",
+    "rename": "Rename",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saving": "Saving…",
+    "deleting": "Deleting…",
+    "retry": "Retry",
+    "empty": "No conversations yet.",
+    "loadError": "Could not load conversations.",
+    "renameTitle": "Rename conversation",
+    "renameDescription": "Enter a new name for this conversation.",
+    "renamePlaceholder": "Conversation name",
+    "deleteTitle": "Delete conversation?",
+    "deleteDescription": "Delete \"{{name}}\"? This cannot be undone."
   },
   "auth": {
     "loading": "Loading…",
     "signInFailed": "Sign-in failed. Please go back and try again.",
     "signOut": "Sign out"
+  },
+  "admin": {
+    "console": "Administration",
+    "title": "Admin console",
+    "description": "Runtime health and directory access management.",
+    "openLogto": "Open Logto Console",
+    "retry": "Retry",
+    "errors": {
+      "request": "Request failed",
+      "forbidden": "Administrator access required",
+      "forbiddenDescription": "The Runtime rejected this request. Your current token does not grant access to this resource."
+    },
+    "system": {
+      "title": "System overview",
+      "description": "Information reported by the Runtime's public /info endpoint.",
+      "name": "Runtime name",
+      "agentOsVersion": "AgentOS version",
+      "agnoVersion": "Agno version",
+      "authMode": "Authentication mode",
+      "userIsolation": "User isolation",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "directory": {
+      "title": "Runtime directory users",
+      "description": "Users appear here after their first valid Runtime request. This is not a complete list of Logto accounts; manage accounts, roles, and assignments in Logto Console.",
+      "disableBoundary": "Disabling blocks Runtime access immediately. It does not suspend the Logto account or revoke its tokens.",
+      "empty": "No Runtime directory users have been provisioned yet.",
+      "user": "User",
+      "email": "Email",
+      "status": "Status",
+      "action": "Action",
+      "disabled": "Disabled",
+      "currentUser": "Current user — self-disable unavailable",
+      "enable": "Enable",
+      "disable": "Disable",
+      "saving": "Saving…",
+      "page": "Page {{page}} of {{total}} · {{count}} users",
+      "previous": "Previous",
+      "next": "Next",
+      "confirmTitle": "Disable Runtime access?",
+      "confirmDescription": "Disable Runtime access for {{user}}? Their next Runtime request will be denied.",
+      "cancel": "Cancel",
+      "confirmDisable": "Disable access"
+    }
   },
   "chat": {
     "labels": {

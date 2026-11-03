@@ -1,8 +1,8 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import type { Resource } from "i18next";
-import { plugins } from "@/plugins";
-import type { LocaleMessages } from "@/plugins/types";
+import { extensions } from "@/extensions";
+import type { LocaleMessages } from "@/extensions/types";
 import commonEn from "./locales/en/common.json";
 
 /**
@@ -10,13 +10,13 @@ import commonEn from "./locales/en/common.json";
  *
  * Languages are resolved once at startup: localStorage → navigator → the
  * default. Every supported language's bundles — the core `common` namespace
- * plus each plugin manifest's `contributes.locales`, namespaced by the
+ * plus each extension manifest's `contributes.locales`, namespaced by the
  * manifest's `id` — are folded into a single `resources` object and passed
  * to `init()`, so registration is synchronous and atomic: no raw keys on
  * first paint, and `changeLanguage()` needs no async loading.
  *
  * Adding a language = add its `common.json`, one entry in
- * `SUPPORTED_LANGUAGES` and `coreResources`; plugins pick it up by shipping
+ * `SUPPORTED_LANGUAGES` and `coreResources`; extensions pick it up by shipping
  * their own `locales/<lang>.json`.
  */
 
@@ -49,12 +49,12 @@ function buildResources(): Resource {
   for (const language of SUPPORTED_LANGUAGES) {
     resources[language] = { ...coreResources[language] };
   }
-  for (const plugin of plugins) {
+  for (const extension of extensions) {
     for (const [language, messages] of Object.entries(
-      plugin.contributes.locales ?? {},
+      extension.contributes.locales ?? {},
     )) {
       if (!isSupported(language)) continue;
-      resources[language][plugin.id] = messages;
+      resources[language][extension.id] = messages;
     }
   }
   return resources;
