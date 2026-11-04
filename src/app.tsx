@@ -13,6 +13,7 @@ import {
 } from "./sessions-api";
 import type { ViewId } from "./nav";
 import ChatPage from "./pages/chat-page";
+import ScheduledTasksPage from "./pages/scheduled-tasks-page";
 
 export default function App() {
   const [threadId, setThreadId] = useState(loadThreadId);
@@ -141,7 +142,7 @@ export default function App() {
           selfManagedAgents={{ [AGENT_ID]: agent }}
           showIntelligenceIndicator={false}
         >
-          {/* Kept mounted while extension views are shown so the conversation
+          {/* Kept mounted while non-chat views are shown so the conversation
               state survives view switches. */}
           <div className={view === "chat" ? "h-full" : "hidden"}>
             <ChatPage
@@ -152,6 +153,7 @@ export default function App() {
           </div>
         </CopilotKit>
         {extensionView && <extensionView.component />}
+        {view === "scheduled-tasks" && <ScheduledTasksPage mode="user" />}
       </AppShell>
     </TooltipProvider>
   );

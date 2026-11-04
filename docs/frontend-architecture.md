@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-11-02 · Covers: v0.4.0 (Conversation History)
+> Last updated: 2026-11-03 · Covers: v0.4.1 (Scheduled Tasks)
 
 ---
 
@@ -154,15 +154,17 @@ The thinnest layer — everything above is library code:
 - **App shell** (`src/components/app-shell.tsx`): the sidebar frame built
   from shadcn Sidebar primitives. Assistant mode has the upper nav, Extensions,
   and a Runtime-backed Recent group listing the user's sessions with
-  switch/rename/delete actions; admin mode exposes only the management entry.
-  Both modes share the brand, collapse behavior, user area, and sign-out flow.
-  All copy is resolved from the i18n layer (§4).
-- **AdminPage** (`src/pages/admin-page.tsx`): reads public `/info` for the
-  Runtime name, AgentOS instance version, Agno version, auth mode, and user
-  isolation; lists and updates the Runtime UserDirectory through `/users`.
-  The page distinguishes directory users from Logto accounts, labels AgentOS
-  rather than Spectres release versions, paginates with response `meta`, and
-  keeps enable/disable pending, confirmation, self-disable, and error states.
+  switch/rename/delete actions; admin mode exposes Management and Scheduled
+  tasks entries. Both modes share the brand, collapse behavior, user area, and
+  sign-out flow. All copy is resolved from the i18n layer (§4).
+- **AdminPage** (`src/pages/admin-page.tsx`): owns the local
+  `overview | scheduled-tasks` admin view. Its overview reads public `/info`
+  for the Runtime name, AgentOS instance version, Agno version, auth mode, and
+  user isolation; it lists and updates the Runtime UserDirectory through
+  `/users`. The page distinguishes directory users from Logto accounts, labels
+  AgentOS rather than Spectres release versions, paginates with response
+  `meta`, and keeps enable/disable pending, confirmation, self-disable, and
+  error states.
 - **Navigation registry** (`src/nav.ts`): core sidebar entries are typed
   data (`NavItem` / `ExtensionGroup`) holding translation **keys**, not copy.
   Extension entries are **not** registered here — they come from the extension
@@ -170,10 +172,23 @@ The thinnest layer — everything above is library code:
 - **Session API** (`src/sessions-api.ts`): typed wrappers over Agno AgentOS's
   built-in `/sessions` endpoints (list, rename, delete), built on the shared
   `runtimeRequest` helper. AG-UI `thread_id` maps 1:1 to Runtime `session_id`.
-- **View state**: no router; the active view (`ViewId`) is local React
-  state in `app.tsx` — the `"chat"` literal widened to include any
-  extension-contributed view id. The chat page stays mounted (hidden) while
-  a extension view is shown, so the conversation survives view switches.
+- **Scheduled Tasks API** (`src/scheduled-tasks-api.ts`): strict Agno
+  `ScheduleResponse` / `ScheduleRunResponse` mirrors and four GET-only wrappers
+  over `/schedules`, schedule detail, run history, and run detail. List calls
+  use Agno's `{data, meta}` envelope; no ownership override or write method
+  exists.
+- **View state**: no router; the ordinary active view (`ViewId`) is local React
+  state in `app.tsx`, and the admin view is local state in `AdminPage`. The
+  chat page stays mounted (hidden) while any ordinary non-chat view is shown,
+  so the conversation survives view switches.
+- **ScheduledTasksPage** (`src/pages/scheduled-tasks-page.tsx`): one shared
+  read-only page in `user | admin` mode. It provides enabled filtering,
+  schedule/run pagination, manual refresh, a schedule-detail Sheet, and
+  expandable execution records. Runtime responses determine visibility; admin
+  mode alone adds owner columns and cross-user data. Unix-second timestamps,
+  nullable fields, raw cron/timezone values, errors, and optional JSON payloads
+  are presentation-formatted. Every request supports cancellation and stale
+  completions are ignored.
 - **ChatPage**: composes the prebuilt chat component, enables the generic
   tool renderer, mounts the extension-contributed tool-card registrars (§3),
   and maps the SDK's chat labels from `common` namespace keys.
@@ -361,9 +376,9 @@ though the client uses token claims to select its presentation.
 | Theming | shadcn Neutral semantic tokens in `src/index.css` (`:root` + `.dark`); `.dark` on `<html>` | Shell and `[data-copilotkit]` chat surface |
 | UI components | shadcn/ui vendored in `src/components/ui/`, Radix primitives, lucide-react icons | App shell (not the chat surface) |
 | Internationalization | react-i18next; `common` + per-extension namespaces, all bundles registered synchronously at init | All UI copy |
-| Navigation | Role-selected top-level surface at the auth gate; assistant `ViewId` remains local state (no router) | Auth gate, app shell |
+| Navigation | Role-selected top-level surface at the auth gate; assistant/admin views remain local state (no router) | Auth gate, app shell |
 | Thread management | Active `thread_id` in `localStorage` via `thread.ts`; session list from Runtime `/sessions` | App code → agent connection + Runtime session API |
-| Runtime REST APIs | Shared authenticated `runtimeRequest`; extension/admin modules retain typed contracts | Admin and extension pages → Runtime |
+| Runtime REST APIs | Shared authenticated `runtimeRequest`; extension/admin/schedule modules retain typed contracts | Admin, extension, and scheduled-task pages → Runtime |
 | Chat tool cards | Extension-contributed `useRenderTool` registrars (zod parameter schemas); shared `{ok,data}`/`{ok,error}` envelope parser in `src/lib/tool-result.ts` | Chat stream → Runtime tools |
 | Endpoint configuration | `VITE_AGENT_ENDPOINT` via `import.meta.env`, default `http://localhost:7777/agui` | HttpAgent wiring + Runtime API base derivation |
 | Authentication | Logto OIDC via `@logto/react`; `VITE_LOGTO_*` env config; Bearer token per request; JWT `scopes`/`sub` role state (§5) | All protected Runtime calls |
@@ -387,7 +402,7 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 8. Source Layout (v0.4.0)
+## 8. Source Layout (v0.4.1)
 
 ```text
 src/
@@ -398,6 +413,7 @@ src/
 ├── auth.ts                # Logto config, safe JWT claims decoding, token getter / re-auth plumbing
 ├── admin-api.ts           # typed /info and UserDirectory REST contracts
 ├── sessions-api.ts        # typed /sessions list, rename, and delete contracts
+├── scheduled-tasks-api.ts # typed GET-only schedule, detail, and run-history contracts
 ├── thread.ts              # thread_id localStorage helpers
 ├── i18n/
 │   ├── index.ts           # i18next init: language resolution, resource assembly
@@ -439,8 +455,9 @@ src/
 │   ├── tool-result.ts     # Runtime tool envelope: {ok,data}/{ok,error} parser
 │   └── utils.ts           # cn() class-merge helper
 ├── pages/
-│   ├── admin-page.tsx     # management-only system overview + directory enable/disable
-│   └── chat-page.tsx      # chat view: chat + tool renderers + label mapping
+│   ├── admin-page.tsx     # admin view state + system overview + directory enable/disable
+│   ├── chat-page.tsx      # chat view: chat + tool renderers + label mapping
+│   └── scheduled-tasks-page.tsx # shared read-only schedules, details, and run history
 └── index.css              # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
@@ -454,9 +471,13 @@ a runtime dependency boundary.
   then redirects to Logto sign-in; all shared Runtime REST calls do the same
   on a 401 response (§5).
 - **Runtime unreachable / wrong endpoint**: the chat surface shows the SDK
-  connection error; admin cards show retryable request errors. A 403 gets a
-  specific access-denied state and is never retried. README documents
-  checking `VITE_AGENT_ENDPOINT` and the Runtime's CORS allowlist.
+  connection error; admin and scheduled-task cards show retryable request
+  errors. A 403 gets a specific access-denied state and is never retried
+  automatically. README documents checking `VITE_AGENT_ENDPOINT` and the
+  Runtime's CORS allowlist.
+- **Stale schedule/run id**: detail views explain that the item is missing or
+  inaccessible (404) and offer an explicit refresh; Runtime owner scoping is
+  not bypassed or distinguished from nonexistence.
 - **Stale thread id** (session deleted server-side or by another client):
   starting a new conversation or picking another session from the sidebar is
   the documented recovery; no automatic retry logic.
@@ -487,7 +508,8 @@ a runtime dependency boundary.
 ## 12. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.4.0-conversation-history.md`](plan/v0.4.0-conversation-history.md) — current milestone plan
+- [`docs/plan/v0.4.1-scheduled-tasks.md`](plan/v0.4.1-scheduled-tasks.md) — current milestone plan
+- [`docs/plan/v0.4.0-conversation-history.md`](plan/v0.4.0-conversation-history.md) — conversation history plan
 - [`docs/plan/v0.3.1-admin-console.md`](plan/v0.3.1-admin-console.md) — admin console milestone plan
 - [`docs/plan/v0.3.0-user-login.md`](plan/v0.3.0-user-login.md) — User Login milestone plan
 - [`docs/plan/v0.2.1-etf-grid-chat-tool-cards.md`](plan/v0.2.1-etf-grid-chat-tool-cards.md) — ETF Grid tool cards milestone plan

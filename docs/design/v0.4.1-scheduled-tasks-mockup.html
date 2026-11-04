@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Spectres — Scheduled Tasks v0.4.1 Prototype</title>
+<style>
+  :root {
+    color-scheme: dark;
+    --background: #171717;
+    --card: #202020;
+    --sidebar: #202020;
+    --hover: #292929;
+    --active: #303030;
+    --foreground: #f5f5f5;
+    --muted: #a3a3a3;
+    --subtle: #737373;
+    --border: rgba(255,255,255,.1);
+    --input: rgba(255,255,255,.15);
+    --destructive: #ef4444;
+    --destructive-bg: rgba(127,29,29,.28);
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--background); color: var(--foreground); font: 14px/1.5 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  button, select { font: inherit; }
+  button { color: inherit; }
+  button:focus-visible, select:focus-visible { outline: 2px solid #737373; outline-offset: 2px; }
+  .prototype-bar { min-height: 42px; padding: 7px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; background: #111; border-bottom: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+  .prototype-title { color: var(--foreground); font-weight: 600; margin-right: auto; }
+  .segmented { display: inline-flex; padding: 2px; border: 1px solid var(--border); border-radius: 7px; background: var(--card); }
+  .segmented button { border: 0; border-radius: 5px; padding: 3px 9px; background: transparent; color: var(--muted); cursor: pointer; font-size: 12px; }
+  .segmented button.active { background: var(--active); color: var(--foreground); }
+  .state-select { color: var(--foreground); background: var(--card); border: 1px solid var(--border); border-radius: 6px; padding: 4px 7px; }
+  .app { height: calc(100vh - 42px); min-height: 650px; display: flex; }
+  .sidebar { width: 240px; flex: 0 0 240px; display: flex; flex-direction: column; background: var(--sidebar); border-right: 1px solid var(--border); }
+  .brand { height: 58px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; font-weight: 650; letter-spacing: .01em; }
+  .icon-button { width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; border: 0; border-radius: 7px; background: transparent; color: var(--muted); cursor: pointer; }
+  .icon-button:hover { background: var(--hover); color: var(--foreground); }
+  .icon { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: 0 0 auto; }
+  .nav { padding: 4px 10px; }
+  .nav-label { padding: 10px 9px 6px; color: var(--subtle); font-size: 11px; }
+  .nav-item { width: 100%; border: 0; background: transparent; display: flex; align-items: center; gap: 10px; padding: 8px 9px; border-radius: 7px; color: var(--muted); text-align: left; cursor: default; }
+  .nav-item.active { background: var(--active); color: var(--foreground); }
+  .nav-item.indent { margin-left: 17px; width: calc(100% - 17px); }
+  .recent { margin-top: 12px; border-top: 1px solid var(--border); padding-top: 4px; }
+  .recent .nav-item { font-size: 13px; }
+  .user { margin-top: auto; border-top: 1px solid var(--border); padding: 12px; display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; background: #404040; font-size: 11px; font-weight: 650; }
+  .user-meta { min-width: 0; }
+  .user-name { font-size: 13px; }
+  .user-role { color: var(--subtle); font-size: 11px; }
+  .main { min-width: 0; flex: 1; overflow: auto; }
+  .content { max-width: 1220px; margin: 0 auto; padding: 30px; }
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; margin-bottom: 24px; }
+  h1 { margin: 0 0 5px; font-size: 25px; line-height: 1.25; letter-spacing: -.02em; }
+  h2 { margin: 0; font-size: 15px; }
+  p { margin: 0; }
+  .description { color: var(--muted); max-width: 670px; }
+  .header-actions { display: flex; align-items: center; gap: 9px; }
+  .badge { display: inline-flex; align-items: center; gap: 5px; width: fit-content; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--border); background: var(--hover); color: var(--muted); font-size: 11px; line-height: 1.5; white-space: nowrap; }
+  .badge.foreground { color: var(--foreground); }
+  .badge.danger { color: #fca5a5; background: var(--destructive-bg); border-color: rgba(239,68,68,.25); }
+  .button { min-height: 34px; display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 6px 12px; border-radius: 7px; border: 1px solid var(--border); background: var(--card); cursor: pointer; font-size: 13px; }
+  .button:hover { background: var(--hover); }
+  .button.primary { background: var(--foreground); color: var(--background); border-color: var(--foreground); }
+  .button:disabled { opacity: .4; cursor: not-allowed; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+  .list-toolbar { padding: 15px 17px; display: flex; align-items: center; justify-content: space-between; gap: 12px; border-bottom: 1px solid var(--border); }
+  .list-title { display: flex; align-items: center; gap: 9px; }
+  .count { color: var(--subtle); font-size: 12px; }
+  .filter { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
+  .filter select { min-width: 120px; background: var(--background); color: var(--foreground); border: 1px solid var(--input); border-radius: 7px; padding: 6px 9px; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; text-align: left; }
+  th { padding: 10px 17px; color: var(--subtle); background: rgba(0,0,0,.08); font-size: 11px; font-weight: 500; white-space: nowrap; }
+  td { padding: 14px 17px; border-top: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:first-child td { border-top: 0; }
+  tbody tr:hover { background: rgba(255,255,255,.018); }
+  .task-button { display: block; max-width: 330px; padding: 0; border: 0; background: none; text-align: left; cursor: pointer; }
+  .task-button:hover .task-name { text-decoration: underline; text-underline-offset: 3px; }
+  .task-name { color: var(--foreground); font-weight: 550; }
+  .task-description { color: var(--subtle); font-size: 12px; margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .secondary { color: var(--muted); }
+  .subtle { color: var(--subtle); }
+  .small { font-size: 12px; }
+  .owner { display: flex; align-items: center; gap: 7px; }
+  .owner-dot { width: 6px; height: 6px; border-radius: 50%; background: #737373; }
+  .pagination { min-height: 52px; padding: 10px 17px; border-top: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 12px; }
+  .page-buttons { display: flex; gap: 7px; }
+  .empty { padding: 58px 24px; text-align: center; }
+  .empty-symbol { width: 40px; height: 40px; margin: 0 auto 13px; border-radius: 10px; display: grid; place-items: center; background: var(--hover); color: var(--muted); }
+  .empty h2 { margin-bottom: 5px; }
+  .empty p { color: var(--muted); font-size: 13px; }
+  .alert { margin: 18px; padding: 15px; border: 1px solid rgba(239,68,68,.3); background: var(--destructive-bg); border-radius: 8px; }
+  .alert-title { color: #fca5a5; font-weight: 600; margin-bottom: 3px; }
+  .alert p { color: var(--muted); font-size: 13px; }
+  .alert .button { margin-top: 12px; }
+  .skeleton { height: 15px; border-radius: 5px; background: linear-gradient(90deg, var(--hover), #343434, var(--hover)); background-size: 200% 100%; animation: shimmer 1.4s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .spin { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .overlay { position: fixed; inset: 42px 0 0; z-index: 20; background: rgba(0,0,0,.46); opacity: 0; pointer-events: none; transition: opacity .18s; }
+  .overlay.open { opacity: 1; pointer-events: auto; }
+  .sheet { position: fixed; z-index: 30; top: 42px; right: 0; bottom: 0; width: min(650px, 94vw); background: var(--card); border-left: 1px solid var(--border); box-shadow: -20px 0 50px rgba(0,0,0,.28); transform: translateX(102%); transition: transform .2s ease; display: flex; flex-direction: column; }
+  .sheet.open { transform: translateX(0); }
+  .sheet-header { padding: 20px 22px 17px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; gap: 16px; }
+  .sheet-heading { min-width: 0; flex: 1; }
+  .sheet-title-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .sheet h2 { font-size: 18px; letter-spacing: -.01em; }
+  .sheet-subtitle { color: var(--muted); font-size: 12px; margin-top: 5px; overflow-wrap: anywhere; }
+  .sheet-body { overflow-y: auto; padding: 20px 22px 28px; }
+  .section + .section { margin-top: 24px; }
+  .section-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 11px; }
+  .section-heading h3 { margin: 0; font-size: 13px; font-weight: 600; }
+  .section-heading span { color: var(--subtle); font-size: 11px; }
+  .details { display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .detail { padding: 11px 13px; border-bottom: 1px solid var(--border); min-width: 0; }
+  .detail:nth-child(odd) { border-right: 1px solid var(--border); }
+  .detail.full { grid-column: 1 / -1; border-right: 0; }
+  .detail:nth-last-child(-n+2) { border-bottom: 0; }
+  .detail.full:last-child { border-bottom: 0; }
+  dt { color: var(--subtle); font-size: 11px; margin-bottom: 3px; }
+  dd { margin: 0; color: var(--foreground); font-size: 12px; overflow-wrap: anywhere; }
+  pre { margin: 0; max-width: 100%; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--muted); font: 11px/1.6 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .code-block { padding: 11px 13px; background: var(--background); border: 1px solid var(--border); border-radius: 8px; }
+  .run-list { border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+  .run-row { display: grid; grid-template-columns: 56px 90px 1fr 70px 28px; align-items: center; gap: 8px; padding: 11px 12px; border-top: 1px solid var(--border); font-size: 12px; }
+  .run-row:first-child { border-top: 0; }
+  .run-row:hover { background: rgba(255,255,255,.018); }
+  .run-expand { border: 0; background: transparent; padding: 2px; color: var(--muted); cursor: pointer; }
+  .run-detail { padding: 13px; background: var(--background); border-top: 1px solid var(--border); }
+  .run-detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+  .run-detail dt { margin-bottom: 2px; }
+  .error-box { padding: 10px 11px; border: 1px solid rgba(239,68,68,.25); border-radius: 7px; background: var(--destructive-bg); color: #fca5a5; font-size: 12px; margin-bottom: 12px; overflow-wrap: anywhere; }
+  .json-label { color: var(--subtle); font-size: 11px; margin: 11px 0 5px; }
+  .drawer-note { margin-top: 18px; color: var(--subtle); font-size: 11px; }
+  .hidden { display: none !important; }
+  @media (max-width: 900px) {
+    .sidebar { width: 64px; flex-basis: 64px; }
+    .brand { justify-content: center; padding: 0; }
+    .brand span, .nav-label, .nav-item span, .user-meta { display: none; }
+    .brand .icon-button { display: none; }
+    .nav { padding: 4px 9px; }
+    .nav-item { justify-content: center; padding: 9px; }
+    .nav-item.indent { margin-left: 0; width: 100%; }
+    .user { justify-content: center; padding: 12px 0; }
+    .content { padding: 24px 20px; }
+  }
+  @media (max-width: 650px) {
+    .prototype-title { width: 100%; }
+    .app { min-height: 700px; }
+    .content { padding: 20px 13px; }
+    .page-header { flex-direction: column; }
+    .list-toolbar { align-items: flex-start; flex-direction: column; }
+    .schedule-col { display: none; }
+    th, td { padding-left: 12px; padding-right: 12px; }
+    .sheet { width: 100vw; max-width: none; }
+    .sheet-header, .sheet-body { padding-left: 16px; padding-right: 16px; }
+    .details { grid-template-columns: 1fr; }
+    .detail, .detail:nth-child(odd) { border-right: 0; border-bottom: 1px solid var(--border); }
+    .detail:last-child { border-bottom: 0; }
+    .run-row { grid-template-columns: 42px 78px 1fr 24px; }
+    .run-status-code { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="prototype-bar">
+  <span class="prototype-title">Spectres Web Client · v0.4.1 Scheduled Tasks</span>
+  <span>Role preview</span>
+  <div class="segmented" aria-label="Role preview">
+    <button id="role-admin" class="active" type="button">Administrator</button>
+    <button id="role-user" type="button">Ordinary user</button>
+  </div>
+  <label>State
+    <select id="preview-state" class="state-select">
+      <option value="normal">Loaded</option>
+      <option value="loading">Loading</option>
+      <option value="empty">Empty</option>
+      <option value="error">Request error</option>
+      <option value="forbidden">403 Forbidden</option>
+    </select>
+  </label>
+</div>
+
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand">
+      <span>Spectres</span>
+      <button class="icon-button" type="button" aria-label="Collapse sidebar">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M3.75 3.75v16.5M20.25 3.75v16.5M14.25 8.25l-3.75 3.75 3.75 3.75"/></svg>
+      </button>
+    </div>
+    <nav id="navigation" class="nav" aria-label="Main navigation"></nav>
+    <div class="user">
+      <div id="avatar" class="avatar">AD</div>
+      <div class="user-meta">
+        <div id="user-name" class="user-name">Admin User</div>
+        <div id="user-role" class="user-role">Administrator</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="main">
+    <div class="content">
+      <header class="page-header">
+        <div>
+          <h1>Scheduled tasks</h1>
+          <p id="page-description" class="description"></p>
+        </div>
+        <div class="header-actions">
+          <span class="badge">Read-only</span>
+          <button id="refresh" class="button" type="button">
+            <svg id="refresh-icon" class="icon" viewBox="0 0 24 24"><path d="M16.023 9.348h4.992v-4.99M3.58 9a8.25 8.25 0 0113.803-3.7l3.581 4.047M7.977 14.652H2.985v4.99M20.42 15a8.25 8.25 0 01-13.803 3.7l-3.632-4.048"/></svg>
+            Refresh
+          </button>
+        </div>
+      </header>
+
+      <section class="card" aria-labelledby="list-heading">
+        <div class="list-toolbar">
+          <div class="list-title">
+            <h2 id="list-heading">Tasks</h2>
+            <span id="task-count" class="count"></span>
+          </div>
+          <label class="filter">State
+            <select id="enabled-filter">
+              <option value="all">All tasks</option>
+              <option value="enabled">Enabled</option>
+              <option value="disabled">Disabled</option>
+            </select>
+          </label>
+        </div>
+        <div id="list-content"></div>
+        <div id="pagination" class="pagination"></div>
+      </section>
+    </div>
+  </main>
+</div>
+
+<div id="overlay" class="overlay open"></div>
+<section id="sheet" class="sheet open" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+  <div class="sheet-header">
+    <div class="sheet-heading">
+      <div id="sheet-title-row" class="sheet-title-row"></div>
+      <p id="sheet-subtitle" class="sheet-subtitle"></p>
+    </div>
+    <button id="close-sheet" class="icon-button" type="button" aria-label="Close task details">
+      <svg class="icon" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+    </button>
+  </div>
+  <div id="sheet-body" class="sheet-body"></div>
+</section>
+
+<script>
+  const icons = {
+    clock: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>',
+    shield: '<svg class="icon" viewBox="0 0 24 24"><path d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.96 11.96 0 013.598 6 12 12 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751A11.96 11.96 0 0112 2.714z"/></svg>',
+    chat: '<svg class="icon" viewBox="0 0 24 24"><path d="M12 20.25c4.97 0 9-3.694 9-8.25s-4.03-8.25-9-8.25-9 3.694-9 8.25c0 2.034.974 3.898 2.625 5.271-.188 1.172-.69 2.119-1.5 2.854 1.875-.104 3.5-.703 4.875-1.674.96.329 1.974.5 3 .5z"/></svg>',
+    puzzle: '<svg class="icon" viewBox="0 0 24 24"><path d="M14.25 6.087c0-.355.186-.676.401-.959.215-.283.349-.614.349-1.003 0-1.036-1.007-1.875-2.25-1.875s-2.25.84-2.25 1.875c0 .389.134.72.349 1.003.215.283.401.604.401.959v1.206c0 .849-.672 1.535-1.5 1.638-.808.091-1.5-.523-1.5-1.342v-1.502c0-.355-.186-.676-.401-.959-.215-.283-.349-.614-.349-1.003 0-1.036 1.007-1.875 2.25-1.875s2.25.84 2.25 1.875"/></svg>',
+    chevron: '<svg class="icon" viewBox="0 0 24 24"><path d="M9 5.25l6.75 6.75L9 18.75"/></svg>',
+    down: '<svg class="icon" viewBox="0 0 24 24"><path d="M5.25 9l6.75 6.75L18.75 9"/></svg>'
+  };
+
+  const schedules = [
+    {
+      id: 'sched-system', name: 'etf_grid_daily_sync', description: 'Synchronize market data and recompute user grid signals.',
+      owner: null, ownerLabel: 'System', cron: '0 9 * * 1,5', timezone: 'Asia/Shanghai', next: 'Nov 5, 2026, 09:00', enabled: true,
+      method: 'POST', endpoint: '/api/v1/extensions/etf-grid/refresh', timeout: '3,600 seconds', retries: '2 attempts · 300-second delay',
+      created: 'Oct 14, 2026, 18:32', updated: 'Nov 2, 2026, 21:15', managed: 'code · extension etf_grid', disabledReason: null,
+      payload: '{}',
+      runs: [
+        { id: 'run-success', attempt: 1, status: 'success', triggered: 'Nov 2, 2026, 09:00:03', completed: 'Nov 2, 2026, 09:00:48', duration: '45.2s', code: '200', error: null, output: '{\n  "sync": { "candles": 18, "errors": [] },\n  "signals": { "users": 2, "errors": [] }\n}' },
+        { id: 'run-retry', attempt: 2, status: 'success', triggered: 'Oct 30, 2026, 09:05:04', completed: 'Oct 30, 2026, 09:05:42', duration: '38.1s', code: '200', error: null, output: '{\n  "sync": { "candles": 18, "errors": [] },\n  "signals": { "users": 2, "errors": [] }\n}' },
+        { id: 'run-failed', attempt: 1, status: 'failed', triggered: 'Oct 30, 2026, 09:00:02', completed: 'Oct 30, 2026, 09:00:11', duration: '9.4s', code: '502', error: 'Upstream market-data provider returned Bad Gateway.', output: null }
+      ]
+    },
+    {
+      id: 'sched-alice-brief', name: 'Morning briefing', description: 'Prepare a daily personal briefing.', owner: 'alice', ownerLabel: 'alice@example.com', cron: '30 7 * * *', timezone: 'Asia/Shanghai', next: 'Nov 4, 2026, 07:30', enabled: true,
+      method: 'POST', endpoint: '/agents/personal-assistant/runs', timeout: '600 seconds', retries: '1 attempt · 60-second delay', created: 'Oct 28, 2026, 20:14', updated: null, managed: 'studio', disabledReason: null,
+      payload: '{\n  "message": "Prepare my morning briefing."\n}',
+      runs: [
+        { id: 'brief-success', attempt: 1, status: 'success', triggered: 'Nov 3, 2026, 07:30:01', completed: 'Nov 3, 2026, 07:30:36', duration: '35.0s', code: '200', error: null, output: '{\n  "session_id": "sess_01JBR...",\n  "run_id": "run_01JBR..."\n}' }
+      ]
+    },
+    {
+      id: 'sched-alice-monthly', name: 'Monthly spending summary', description: null, owner: 'alice', ownerLabel: 'alice@example.com', cron: '0 10 1 * *', timezone: 'Asia/Shanghai', next: null, enabled: false,
+      method: 'POST', endpoint: '/agents/personal-assistant/runs', timeout: '600 seconds', retries: 'No retries', created: 'Oct 18, 2026, 11:06', updated: 'Nov 1, 2026, 19:22', managed: 'studio', disabledReason: 'Paused by owner', payload: '{\n  "message": "Summarize last month\'s spending."\n}', runs: []
+    },
+    {
+      id: 'sched-bob-review', name: 'Weekly portfolio review', description: 'Review portfolio allocation every Friday.', owner: 'bob', ownerLabel: 'bob@example.com', cron: '0 18 * * 5', timezone: 'Asia/Shanghai', next: null, enabled: false,
+      method: 'POST', endpoint: '/agents/personal-assistant/runs', timeout: '900 seconds', retries: '1 attempt · 120-second delay', created: 'Oct 21, 2026, 16:40', updated: 'Oct 30, 2026, 18:02', managed: 'studio', disabledReason: 'Paused by owner', payload: '{\n  "message": "Review my portfolio allocation."\n}',
+      runs: [
+        { id: 'bob-failed', attempt: 1, status: 'failed', triggered: 'Oct 23, 2026, 18:00:01', completed: 'Oct 23, 2026, 18:00:18', duration: '17.2s', code: '500', error: 'Agent run did not complete successfully.', output: null }
+      ]
+    }
+  ];
+
+  const state = { role: 'admin', filter: 'all', preview: 'normal', selected: 'sched-system', expandedRun: 'run-failed', drawerOpen: true };
+
+  function visibleSchedules() {
+    return schedules.filter(task => {
+      if (state.role === 'user' && task.owner !== 'alice') return false;
+      if (state.filter === 'enabled' && !task.enabled) return false;
+      if (state.filter === 'disabled' && task.enabled) return false;
+      return true;
+    });
+  }
+
+  function navItem(icon, label, active = false, indent = false) {
+    return '<button type="button" class="nav-item' + (active ? ' active' : '') + (indent ? ' indent' : '') + '">' + icons[icon] + '<span>' + label + '</span></button>';
+  }
+
+  function renderRole() {
+    document.getElementById('role-admin').classList.toggle('active', state.role === 'admin');
+    document.getElementById('role-user').classList.toggle('active', state.role === 'user');
+    const admin = state.role === 'admin';
+    document.getElementById('navigation').innerHTML = admin
+      ? '<div class="nav-label">Administration</div>' + navItem('shield', 'Admin console') + navItem('clock', 'Scheduled tasks', true)
+      : navItem('chat', 'New chat') + navItem('clock', 'Scheduled tasks', true) + '<div class="nav-label">Extensions</div>' + navItem('puzzle', 'ETF Grid', false, true) + '<div class="recent"><div class="nav-label">Recent</div>' + navItem('chat', 'Grid signals and today\'s trades') + navItem('chat', 'Next week\'s investment plan') + '</div>';
+    document.getElementById('avatar').textContent = admin ? 'AD' : 'AL';
+    document.getElementById('user-name').textContent = admin ? 'Admin User' : 'Alice';
+    document.getElementById('user-role').textContent = admin ? 'Administrator' : 'Ordinary user';
+    document.getElementById('page-description').textContent = admin
+      ? 'Inspect public system tasks and personal tasks across users. Visibility is enforced by the Runtime.'
+      : 'Inspect your personal schedules and execution history. Public system tasks are administrator-only.';
+  }
+
+  function badge(label, danger = false) {
+    return '<span class="badge' + (danger ? ' danger' : '') + '">' + label + '</span>';
+  }
+
+  function taskRow(task) {
+    return '<tr>' +
+      '<td><button class="task-button" type="button" data-task="' + task.id + '"><div class="task-name">' + task.name + '</div><div class="task-description">' + (task.description || 'No description') + '</div></button></td>' +
+      (state.role === 'admin' ? '<td><div class="owner"><span class="owner-dot"></span><div><div class="small">' + (task.owner ? 'Personal' : 'System') + '</div><div class="subtle small">' + (task.owner ? task.ownerLabel : 'Public · admin only') + '</div></div></div></td>' : '') +
+      '<td class="schedule-col"><div class="mono">' + task.cron + '</div><div class="subtle small">' + task.timezone + '</div></td>' +
+      '<td><div class="small">' + (task.next || '—') + '</div>' + (task.next ? '<div class="subtle small">' + task.timezone + '</div>' : '') + '</td>' +
+      '<td>' + badge(task.enabled ? 'Enabled' : 'Disabled') + '</td>' +
+    '</tr>';
+  }
+
+  function renderList() {
+    const tasks = visibleSchedules();
+    document.getElementById('task-count').textContent = state.preview === 'normal' ? tasks.length + ' total' : '';
+    const content = document.getElementById('list-content');
+    const pagination = document.getElementById('pagination');
+
+    if (state.preview === 'loading') {
+      content.innerHTML = '<div style="padding:18px;display:grid;gap:20px">' + Array.from({length: 4}, () => '<div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:28px"><div class="skeleton"></div><div class="skeleton"></div><div class="skeleton"></div></div>').join('') + '</div>';
+      pagination.innerHTML = '<span>Loading tasks…</span>';
+      return;
+    }
+    if (state.preview === 'error' || state.preview === 'forbidden') {
+      const forbidden = state.preview === 'forbidden';
+      content.innerHTML = '<div class="alert"><div class="alert-title">' + (forbidden ? 'Schedule access required' : 'Could not load scheduled tasks') + '</div><p>' + (forbidden ? 'The Runtime rejected this request. Your token does not include schedules:read.' : 'The Runtime could not be reached. Check its status and try again.') + '</p>' + (forbidden ? '' : '<button class="button" type="button" data-retry>Retry</button>') + '</div>';
+      pagination.innerHTML = '<span>' + (forbidden ? '403 Forbidden' : 'Request failed') + '</span>';
+      const retry = content.querySelector('[data-retry]');
+      if (retry) retry.addEventListener('click', refresh);
+      return;
+    }
+    if (state.preview === 'empty' || tasks.length === 0) {
+      content.innerHTML = '<div class="empty"><div class="empty-symbol">' + icons.clock + '</div><h2>No scheduled tasks</h2><p>' + (state.filter === 'all' ? (state.role === 'admin' ? 'No schedules are visible to this Runtime.' : 'You do not have any personal scheduled tasks yet.') : 'No tasks match the selected state filter.') + '</p></div>';
+      pagination.innerHTML = '<span>0 tasks</span><div class="page-buttons"><button class="button" disabled>Previous</button><button class="button" disabled>Next</button></div>';
+      return;
+    }
+
+    content.innerHTML = '<div class="table-wrap"><table><thead><tr><th>Task</th>' + (state.role === 'admin' ? '<th>Owner</th>' : '') + '<th class="schedule-col">Schedule</th><th>Next run</th><th>State</th></tr></thead><tbody>' + tasks.map(taskRow).join('') + '</tbody></table></div>';
+    pagination.innerHTML = '<span>1–' + tasks.length + ' of ' + tasks.length + ' tasks · Page 1 of 1</span><div class="page-buttons"><button class="button" disabled>Previous</button><button class="button" disabled>Next</button></div>';
+    content.querySelectorAll('[data-task]').forEach(button => button.addEventListener('click', () => openTask(button.dataset.task)));
+    const retry = content.querySelector('[data-retry]');
+    if (retry) retry.addEventListener('click', refresh);
+  }
+
+  function runRow(run) {
+    const expanded = state.expandedRun === run.id;
+    return '<div class="run-row">' +
+      '<span class="subtle">#' + run.attempt + '</span>' +
+      badge(run.status, run.status === 'failed') +
+      '<div><div>' + run.triggered + '</div><div class="subtle small">' + run.duration + '</div></div>' +
+      '<span class="run-status-code mono subtle">HTTP ' + run.code + '</span>' +
+      '<button class="run-expand" type="button" data-run="' + run.id + '" aria-label="' + (expanded ? 'Collapse' : 'Expand') + ' run ' + run.attempt + '">' + (expanded ? icons.down : icons.chevron) + '</button>' +
+    '</div>' + (expanded ? runDetail(run) : '');
+  }
+
+  function runDetail(run) {
+    return '<div class="run-detail">' +
+      '<div class="run-detail-grid"><div><dt>Run ID</dt><dd class="mono">' + run.id + '</dd></div><div><dt>Attempt</dt><dd>' + run.attempt + '</dd></div><div><dt>Triggered at</dt><dd>' + run.triggered + '</dd></div><div><dt>Completed at</dt><dd>' + run.completed + '</dd></div></div>' +
+      (run.error ? '<div class="error-box"><strong>Execution error</strong><br>' + run.error + '</div>' : '') +
+      '<div class="json-label">Output</div><div class="code-block"><pre>' + (run.output || 'Not recorded for this execution.') + '</pre></div>' +
+    '</div>';
+  }
+
+  function renderSheet() {
+    const task = schedules.find(item => item.id === state.selected);
+    if (!task) return;
+    document.getElementById('sheet-title-row').innerHTML = '<h2 id="sheet-title">' + task.name + '</h2>' + badge(task.enabled ? 'Enabled' : 'Disabled');
+    document.getElementById('sheet-subtitle').textContent = task.description || 'No description';
+    const owner = task.owner ? 'Personal · ' + task.ownerLabel : 'System · public task (admin only)';
+    const runContent = task.runs.length
+      ? '<div class="run-list">' + task.runs.map(runRow).join('') + '</div><div class="pagination" style="border:0;padding-left:0;padding-right:0"><span>1–' + task.runs.length + ' of ' + task.runs.length + ' runs</span><div class="page-buttons"><button class="button" disabled>Previous</button><button class="button" disabled>Next</button></div></div>'
+      : '<div class="empty" style="padding:30px 16px;border:1px solid var(--border);border-radius:8px"><h2>No runs yet</h2><p>Execution attempts will appear here after the task runs.</p></div>';
+    document.getElementById('sheet-body').innerHTML =
+      '<section class="section"><div class="section-heading"><h3>Schedule configuration</h3><span>GET /schedules/' + task.id + '</span></div>' +
+      '<dl class="details">' +
+        '<div class="detail"><dt>Owner</dt><dd>' + owner + '</dd></div><div class="detail"><dt>Next run</dt><dd>' + (task.next || '—') + (task.next ? '<br><span class="subtle">' + task.timezone + '</span>' : '') + '</dd></div>' +
+        '<div class="detail"><dt>Cron expression</dt><dd class="mono">' + task.cron + '</dd></div><div class="detail"><dt>Timezone</dt><dd>' + task.timezone + '</dd></div>' +
+        '<div class="detail full"><dt>Target</dt><dd class="mono">' + task.method + ' ' + task.endpoint + '</dd></div>' +
+        '<div class="detail"><dt>Timeout</dt><dd>' + task.timeout + '</dd></div><div class="detail"><dt>Retries</dt><dd>' + task.retries + '</dd></div>' +
+        '<div class="detail"><dt>Managed by</dt><dd>' + task.managed + '</dd></div><div class="detail"><dt>Created</dt><dd>' + task.created + '</dd></div>' +
+        (task.disabledReason ? '<div class="detail full"><dt>Disabled reason</dt><dd>' + task.disabledReason + '</dd></div>' : '') +
+      '</dl></section>' +
+      '<section class="section"><div class="section-heading"><h3>Payload</h3></div><div class="code-block"><pre>' + task.payload + '</pre></div></section>' +
+      '<section class="section"><div class="section-heading"><h3>Run history</h3><span>Newest first · times in Asia/Shanghai</span></div>' + runContent + '</section>' +
+      '<p class="drawer-note">Read-only view. Schedule creation, changes, and manual triggering are not available in v0.4.1.</p>';
+    document.querySelectorAll('[data-run]').forEach(button => button.addEventListener('click', () => {
+      state.expandedRun = state.expandedRun === button.dataset.run ? null : button.dataset.run;
+      renderSheet();
+    }));
+  }
+
+  function setDrawer(open) {
+    state.drawerOpen = open;
+    document.getElementById('sheet').classList.toggle('open', open);
+    document.getElementById('overlay').classList.toggle('open', open);
+  }
+
+  function openTask(id) {
+    state.selected = id;
+    state.expandedRun = null;
+    renderSheet();
+    setDrawer(true);
+  }
+
+  function render() {
+    renderRole();
+    renderList();
+    renderSheet();
+    setDrawer(state.drawerOpen);
+  }
+
+  function refresh() {
+    state.preview = 'loading';
+    document.getElementById('preview-state').value = 'loading';
+    document.getElementById('refresh-icon').classList.add('spin');
+    renderList();
+    window.setTimeout(() => {
+      state.preview = 'normal';
+      document.getElementById('preview-state').value = 'normal';
+      document.getElementById('refresh-icon').classList.remove('spin');
+      renderList();
+    }, 650);
+  }
+
+  document.getElementById('role-admin').addEventListener('click', () => {
+    state.role = 'admin'; state.filter = 'all'; state.preview = 'normal'; state.selected = 'sched-system'; state.expandedRun = 'run-failed';
+    document.getElementById('enabled-filter').value = 'all'; document.getElementById('preview-state').value = 'normal';
+    setDrawer(false); render();
+  });
+  document.getElementById('role-user').addEventListener('click', () => {
+    state.role = 'user'; state.filter = 'all'; state.preview = 'normal'; state.selected = 'sched-alice-brief'; state.expandedRun = null;
+    document.getElementById('enabled-filter').value = 'all'; document.getElementById('preview-state').value = 'normal';
+    setDrawer(false); render();
+  });
+  document.getElementById('enabled-filter').addEventListener('change', event => {
+    state.filter = event.target.value; setDrawer(false); renderList();
+  });
+  document.getElementById('preview-state').addEventListener('change', event => {
+    state.preview = event.target.value; setDrawer(false); renderList();
+  });
+  document.getElementById('refresh').addEventListener('click', refresh);
+  document.getElementById('close-sheet').addEventListener('click', () => setDrawer(false));
+  document.getElementById('overlay').addEventListener('click', () => setDrawer(false));
+  document.addEventListener('keydown', event => { if (event.key === 'Escape') setDrawer(false); });
+
+  render();
+</script>
+</body>
+</html>

@@ -55,9 +55,11 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 
 ### 3.2 Current Milestone
 
-- **v0.4.0 — Conversation History**: Runtime-backed session list in the sidebar; users can switch between historical conversations, start new chats, and rename or delete sessions. New conversations appear in the sidebar only after their first message is persisted. Implementation follows [`docs/plan/v0.4.0-conversation-history.md`](docs/plan/v0.4.0-conversation-history.md).
+- **v0.4.1 — Scheduled Tasks (Read-only)**: Runtime-backed schedule list, configuration details, and execution history for both roles. Ordinary users see only their own personal tasks; administrators also see public system tasks and other users' personal tasks. Implementation follows [`docs/plan/v0.4.1-scheduled-tasks.md`](docs/plan/v0.4.1-scheduled-tasks.md).
 
 ### 3.2.1 Completed Milestones
+
+- **v0.4.0 — Conversation History**: Runtime-backed session list in the sidebar; users can switch between historical conversations, start new chats, and rename or delete sessions. New conversations appear in the sidebar only after their first message is persisted. Completed per [`docs/plan/v0.4.0-conversation-history.md`](docs/plan/v0.4.0-conversation-history.md).
 
 - **v0.3.1 — Minimal Admin Console**: JWT `scopes`-derived role views with a management-only console for `agent_os:admin` administrators; public Runtime system overview and paginated Runtime UserDirectory enable/disable, with no chat or AG-UI surface mounted in admin mode. Ordinary users retain the existing assistant experience. Completed per [`docs/plan/v0.3.1-admin-console.md`](docs/plan/v0.3.1-admin-console.md).
 

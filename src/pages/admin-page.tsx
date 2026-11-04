@@ -41,6 +41,7 @@ import {
 } from "@/components/ui/table";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { RuntimeApiError } from "@/lib/runtime-api";
+import ScheduledTasksPage from "@/pages/scheduled-tasks-page";
 
 interface RequestFailure {
   message: string;
@@ -156,6 +157,7 @@ function SystemOverview() {
 
 export default function AdminPage({ currentUserId }: { currentUserId: string | null }) {
   const { t } = useTranslation("common");
+  const [view, setView] = useState<"overview" | "scheduled-tasks">("overview");
   const [page, setPage] = useState(1);
   const [directory, setDirectory] = useState<DirectoryPage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -229,7 +231,12 @@ export default function AdminPage({ currentUserId }: { currentUserId: string | n
 
   return (
     <TooltipProvider>
-      <AppShell mode="admin">
+      <AppShell
+        mode="admin"
+        activeView={view}
+        onSelectView={(nextView) => setView(nextView === "scheduled-tasks" ? "scheduled-tasks" : "overview")}
+      >
+        {view === "scheduled-tasks" ? <ScheduledTasksPage mode="admin" /> : (
         <main className="h-full overflow-y-auto">
           <div className="mx-auto flex max-w-6xl flex-col gap-6 p-4 md:p-8">
             <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -363,6 +370,7 @@ export default function AdminPage({ currentUserId }: { currentUserId: string | n
             </Card>
           </div>
         </main>
+        )}
       </AppShell>
 
       <Dialog

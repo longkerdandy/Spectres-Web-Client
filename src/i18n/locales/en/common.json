@@ -2,7 +2,6 @@
   "nav": {
     "newChat": "New chat",
     "scheduledTasks": "Scheduled tasks",
-    "scheduledTasksBadge": "Soon",
     "extensions": "Extensions",
     "recent": "Recent"
   },
@@ -72,6 +71,105 @@
       "confirmDescription": "Disable Runtime access for {{user}}? Their next Runtime request will be denied.",
       "cancel": "Cancel",
       "confirmDisable": "Disable access"
+    }
+  },
+  "scheduledTasks": {
+    "title": "Scheduled tasks",
+    "adminDescription": "Inspect public system tasks and personal tasks across users. Visibility is enforced by the Runtime.",
+    "userDescription": "Inspect your personal schedules and execution history. Public system tasks are administrator-only.",
+    "readOnly": "Read-only",
+    "refresh": "Refresh",
+    "listTitle": "Tasks",
+    "total": "{{count}} total",
+    "filterLabel": "Filter tasks by state",
+    "filters": {
+      "all": "All tasks",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "columns": {
+      "task": "Task",
+      "owner": "Owner",
+      "schedule": "Schedule",
+      "nextRun": "Next run",
+      "state": "State"
+    },
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "personal": "Personal",
+    "system": "System",
+    "systemVisibility": "Public · admin only",
+    "noDescription": "No description",
+    "empty": "No scheduled tasks",
+    "emptyAdmin": "No schedules are visible on this Runtime.",
+    "emptyUser": "You do not have any personal scheduled tasks yet.",
+    "emptyFiltered": "No tasks match the selected state filter.",
+    "previous": "Previous",
+    "next": "Next",
+    "pagination": {
+      "tasks": "Page {{page}} of {{total}} · {{count}} tasks",
+      "runs": "Page {{page}} of {{total}} · {{count}} runs"
+    },
+    "retry": "Retry",
+    "errors": {
+      "request": "Request failed",
+      "forbidden": "Schedule access required",
+      "forbiddenDescription": "The Runtime rejected this request. Your current token does not include schedules:read.",
+      "notFound": "Schedule or run not found",
+      "notFoundDescription": "The item no longer exists or is not accessible to your account. Retry to refresh the current view."
+    },
+    "readOnlyNote": "Read-only view. Schedule creation, changes, and manual triggering are not available.",
+    "notRecorded": "Not recorded",
+    "details": {
+      "configuration": "Schedule configuration",
+      "owner": "Owner",
+      "nextRun": "Next run",
+      "cron": "Cron expression",
+      "timezone": "Timezone",
+      "target": "Target",
+      "timeout": "Timeout",
+      "seconds": "{{count}} seconds",
+      "retries": "Retries",
+      "retryValue": "{{count}} retries · {{delay}}-second delay",
+      "created": "Created",
+      "updated": "Updated",
+      "managedBy": "Managed by",
+      "targetType": "Target type",
+      "targetId": "Target ID",
+      "disabledReason": "Disabled reason",
+      "payload": "Payload"
+    },
+    "runs": {
+      "title": "Run history",
+      "localTimes": "Times in {{timezone}}",
+      "empty": "No runs yet",
+      "emptyDescription": "Execution attempts will appear here after the task runs.",
+      "attempt": "Attempt",
+      "status": "Status",
+      "triggered": "Triggered",
+      "http": "HTTP",
+      "details": "Run details",
+      "expand": "Expand run",
+      "collapse": "Collapse run"
+    },
+    "runStatus": {
+      "success": "Success",
+      "failed": "Failed",
+      "running": "Running",
+      "pending": "Pending"
+    },
+    "run": {
+      "runId": "Schedule run ID",
+      "attempt": "Attempt",
+      "triggeredAt": "Triggered at",
+      "completedAt": "Completed at",
+      "linkedRunId": "Linked run ID",
+      "sessionId": "Session ID",
+      "localTimes": "Times shown in your local timezone: {{timezone}}",
+      "executionError": "Execution error",
+      "input": "Input",
+      "output": "Output",
+      "requirements": "Requirements"
     }
   },
   "chat": {

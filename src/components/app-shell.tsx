@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLogto } from "@logto/react";
 import {
   ChevronDown,
+  Clock,
   LogOut,
   MessageSquare,
   MoreHorizontal,
@@ -139,6 +140,9 @@ export function AppShell({
         onResetThread?.();
         onSelectView?.("chat");
         break;
+      case "select-view":
+        onSelectView?.(action.view);
+        break;
     }
   }
 
@@ -146,6 +150,7 @@ export function AppShell({
     return (
       <SidebarMenuItem key={item.id}>
         <SidebarMenuButton
+          isActive={item.id === activeView}
           disabled={item.disabled}
           onClick={() => runAction(item.action)}
         >
@@ -278,9 +283,21 @@ export function AppShell({
               <SidebarGroupContent>
                 <SidebarMenu>
                   <SidebarMenuItem>
-                    <SidebarMenuButton isActive>
+                    <SidebarMenuButton
+                      isActive={activeView === "overview"}
+                      onClick={() => onSelectView?.("overview")}
+                    >
                       <ShieldCheck />
                       <span>{t("admin.title")}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      isActive={activeView === "scheduled-tasks"}
+                      onClick={() => onSelectView?.("scheduled-tasks")}
+                    >
+                      <Clock />
+                      <span>{t("nav.scheduledTasks")}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 </SidebarMenu>

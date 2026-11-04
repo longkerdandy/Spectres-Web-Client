@@ -4,7 +4,7 @@ import { Calculator, RefreshCw } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ApiError, computeSignals, errorMessage, getStatus, refreshData } from "./api";
+import { computeSignals, errorMessage, getStatus, refreshData } from "./api";
 import { Ledger } from "./ledger";
 import { computeNotice, syncNotice } from "./notice";
 import { StatusTable } from "./status-table";
@@ -65,44 +65,30 @@ export default function GridPage() {
     };
   }, [loadStatus]);
 
-  /** Refresh = full pipeline (sync + recompute) in one composite call. */
+  /** Refresh syncs shared market data; signals are recomputed separately. */
   async function handleRefresh() {
     const controller = new AbortController();
     pipelineControllerRef.current = controller;
     setRefreshing(true);
     setNotice(null);
-    // Whether server data may have changed and the tables are worth
-    // reloading: always on 200; on failure only when sync completed and
-    // the recompute raised (500) — on 502/network failure nothing changed.
     let completed = false;
     try {
       const result = await refreshData(controller.signal);
       completed = true;
-      const syncInfo = syncNotice(t, result.sync);
-      const computeInfo = computeNotice(t, result.signals);
-      const partial = syncInfo.errors.length > 0 || computeInfo.skipped !== null;
+      const syncInfo = syncNotice(t, result);
+      const partial = syncInfo.errors.length > 0;
       setNotice({
         variant: partial ? "destructive" : "default",
         title: partial
           ? t("notice.refreshPartial")
           : t("notice.refreshSuccess"),
-        description: [
-          ...syncInfo.lines,
-          ...syncInfo.errors,
-          computeInfo.done,
-          ...(computeInfo.skipped ? [computeInfo.skipped] : []),
-        ].join(" · "),
+        description: [...syncInfo.lines, ...syncInfo.errors].join(" · "),
       });
     } catch (error) {
-      if (error instanceof ApiError && error.status === 500) completed = true;
       if (!controller.signal.aborted) {
-        // 502 (or unreachable) = sync stage failed; 500 = recompute raised.
-        const syncFailed = !(error instanceof ApiError) || error.status === 502;
         setNotice({
           variant: "destructive",
-          title: syncFailed
-            ? t("notice.syncFailed")
-            : t("notice.computeFailed"),
+          title: t("notice.syncFailed"),
           description: errorMessage(error),
         });
       }

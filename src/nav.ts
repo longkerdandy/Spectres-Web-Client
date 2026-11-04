@@ -17,7 +17,9 @@ import { Clock, Puzzle, SquarePen } from "lucide-react";
  */
 export type ViewId = "chat" | (string & {});
 
-export type NavAction = { type: "reset-thread" };
+export type NavAction =
+  | { type: "reset-thread" }
+  | { type: "select-view"; view: ViewId };
 
 export interface NavItem {
   id: string;
@@ -49,8 +51,7 @@ export const primaryNav: NavItem[] = [
     id: "scheduled-tasks",
     labelKey: "nav.scheduledTasks",
     icon: Clock,
-    disabled: true,
-    badgeKey: "nav.scheduledTasksBadge",
+    action: { type: "select-view", view: "scheduled-tasks" },
   },
 ];
 

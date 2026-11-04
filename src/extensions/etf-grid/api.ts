@@ -5,7 +5,7 @@ import {
 import type {
   ComputeSignalsResult,
   Page,
-  RefreshResult,
+  SyncResult,
   SymbolStatus,
   Trade,
   TradeCreate,
@@ -59,8 +59,8 @@ export function getStatus(signal?: AbortSignal): Promise<SymbolStatus[]> {
   return request("/status", { signal });
 }
 
-export function refreshData(signal?: AbortSignal): Promise<RefreshResult> {
-  return request("/refresh", { method: "POST", signal });
+export function refreshData(signal?: AbortSignal): Promise<SyncResult> {
+  return request("/sync", { method: "POST", signal });
 }
 
 export function computeSignals(signal?: AbortSignal): Promise<ComputeSignalsResult> {
