@@ -1,19 +1,44 @@
-import { Fragment, useEffect, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import { ChevronDown, ChevronLeft, ChevronRight, ChevronUp, RefreshCw } from "lucide-react";
 import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  ChevronUp,
+  Loader2,
+  Pause,
+  Pencil,
+  Play,
+  Plus,
+  RefreshCw,
+  Trash2,
+} from "lucide-react";
+import {
+  deleteSchedule,
+  disableSchedule,
+  enableSchedule,
   getSchedule,
   getScheduleRun,
   getScheduleRuns,
   getSchedules,
+  triggerSchedule,
   type Schedule,
   type SchedulePage,
   type ScheduleRun,
+  type ScheduleState,
 } from "@/scheduled-tasks-api";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Sheet,
@@ -32,6 +57,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { RuntimeApiError } from "@/lib/runtime-api";
+import ScheduleFormDialog from "@/pages/schedule-form-dialog";
 
 type EnabledFilter = "all" | "enabled" | "disabled";
 
@@ -53,11 +79,19 @@ function failure(error: unknown): RequestFailure {
 
 function formatTimestamp(value: number | null, timezone?: string): string {
   if (value === null) return "—";
-  return new Intl.DateTimeFormat(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
+  const parts = new Intl.DateTimeFormat("en", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
     timeZone: timezone,
-  }).format(new Date(value * 1000));
+  }).formatToParts(new Date(value * 1000));
+  const values: Record<string, string> = {};
+  for (const part of parts) values[part.type] = part.value;
+  return `${values.year}-${values.month}-${values.day} ${values.hour}:${values.minute}:${values.second}`;
 }
 
 function formatDuration(run: ScheduleRun): string {
@@ -99,6 +133,35 @@ function RequestError({ error, onRetry }: { error: RequestFailure; onRetry: () =
       </AlertDescription>
     </Alert>
   );
+}
+
+type MutationAction = "state" | "trigger" | "delete";
+
+function MutationError({ error }: { error: RequestFailure }) {
+  const { t } = useTranslation("common");
+  const title = error.status === 403
+    ? t("scheduledTasks.mutationErrors.forbidden")
+    : error.status === 404
+      ? t("scheduledTasks.mutationErrors.notFound")
+      : error.status === 409
+        ? t("scheduledTasks.mutationErrors.conflict")
+        : error.status === 422
+          ? t("scheduledTasks.mutationErrors.validation")
+          : error.status === 503
+            ? t("scheduledTasks.mutationErrors.unavailable")
+            : t("scheduledTasks.errors.request");
+  return (
+    <Alert variant="destructive">
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription className="break-words">{error.message}</AlertDescription>
+    </Alert>
+  );
+}
+
+function runStatusKey(status: string): string | null {
+  return ["success", "failed", "running", "pending"].includes(status)
+    ? `scheduledTasks.runStatus.${status}`
+    : null;
 }
 
 function PaginationControls({
@@ -327,7 +390,13 @@ function RunDetail({
   );
 }
 
-function RunHistory({ scheduleId, refreshRevision }: { scheduleId: string; refreshRevision: number }) {
+function RunHistory({
+  scheduleId,
+  refreshRevision,
+}: {
+  scheduleId: string;
+  refreshRevision: number;
+}) {
   const { t } = useTranslation("common");
   const [page, setPage] = useState(1);
   const [runsPage, setRunsPage] = useState<SchedulePage<ScheduleRun> | null>(null);
@@ -360,10 +429,8 @@ function RunHistory({ scheduleId, refreshRevision }: { scheduleId: string; refre
   }
 
   function statusLabel(status: string): string {
-    if (["success", "failed", "running", "pending"].includes(status)) {
-      return t(`scheduledTasks.runStatus.${status}`);
-    }
-    return status;
+    const key = runStatusKey(status);
+    return key ? t(key) : status;
   }
 
   return (
@@ -455,28 +522,49 @@ function ScheduleDetailSheet({
   scheduleId,
   fallbackName,
   mode,
-  refreshRevision,
+  scheduleRevision,
+  runRevision,
+  runResetRevision,
+  pendingAction,
   onClose,
   onListRefresh,
+  onScheduleSaved,
+  onStateChange,
+  onTrigger,
+  onDelete,
 }: {
   scheduleId: string;
   fallbackName: string;
   mode: "user" | "admin";
-  refreshRevision: number;
+  scheduleRevision: number;
+  runRevision: number;
+  runResetRevision: number;
+  pendingAction: MutationAction | null;
   onClose: () => void;
   onListRefresh: () => void;
+  onScheduleSaved: (schedule: Schedule) => void;
+  onStateChange: (schedule: Schedule) => Promise<ScheduleState>;
+  onTrigger: (schedule: Schedule) => Promise<ScheduleRun>;
+  onDelete: (schedule: Schedule) => Promise<void>;
 }) {
   const { t } = useTranslation("common");
   const [schedule, setSchedule] = useState<Schedule | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<RequestFailure | null>(null);
   const [revision, setRevision] = useState(0);
+  const [editing, setEditing] = useState(false);
+  const [actionError, setActionError] = useState<RequestFailure | null>(null);
+  const [notice, setNotice] = useState<{ message: string; detail?: string; destructive: boolean } | null>(null);
+  const [triggerOpen, setTriggerOpen] = useState(false);
+  const [triggerError, setTriggerError] = useState<RequestFailure | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteError, setDeleteError] = useState<RequestFailure | null>(null);
+  const pending = pendingAction !== null;
 
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    setSchedule(null);
     void getSchedule(scheduleId, controller.signal)
       .then((result) => {
         if (!controller.signal.aborted) setSchedule(result);
@@ -488,50 +576,226 @@ function ScheduleDetailSheet({
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [scheduleId, refreshRevision, revision]);
+  }, [scheduleId, scheduleRevision, revision]);
+
+  function recoverMissing(error: RequestFailure): boolean {
+    if (error.status !== 404) return false;
+    onClose();
+    onListRefresh();
+    return true;
+  }
+
+  async function changeState() {
+    if (!schedule || pending) return;
+    setActionError(null);
+    setNotice(null);
+    try {
+      const state = await onStateChange(schedule);
+      setSchedule((current) => current ? { ...current, ...state } : current);
+      setNotice({
+        message: t(state.enabled ? "scheduledTasks.notices.enabled" : "scheduledTasks.notices.disabled", { name: state.name }),
+        destructive: false,
+      });
+    } catch (reason: unknown) {
+      if (isAbort(reason)) return;
+      const failureValue = failure(reason);
+      if (!recoverMissing(failureValue)) setActionError(failureValue);
+    }
+  }
+
+  async function runNow() {
+    if (!schedule || pending || !schedule.enabled) return;
+    setTriggerError(null);
+    setNotice(null);
+    try {
+      const run = await onTrigger(schedule);
+      const statusKey = runStatusKey(run.status);
+      const status = statusKey ? t(statusKey) : run.status;
+      setTriggerOpen(false);
+      setNotice({
+        message: t("scheduledTasks.notices.triggered", { name: schedule.name, status }),
+        detail: run.error ?? undefined,
+        destructive: run.status === "failed",
+      });
+    } catch (reason: unknown) {
+      if (isAbort(reason)) return;
+      const failureValue = failure(reason);
+      if (recoverMissing(failureValue)) setTriggerOpen(false);
+      else setTriggerError(failureValue);
+    }
+  }
+
+  async function remove() {
+    if (!schedule || pending) return;
+    setDeleteError(null);
+    try {
+      await onDelete(schedule);
+    } catch (reason: unknown) {
+      if (isAbort(reason)) return;
+      const failureValue = failure(reason);
+      if (recoverMissing(failureValue)) setDeleteOpen(false);
+      else setDeleteError(failureValue);
+    }
+  }
 
   return (
-    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
-      <SheetContent className="w-full gap-0 sm:max-w-2xl">
-        <SheetHeader className="border-b pr-12">
-          <div className="flex flex-wrap items-center gap-2">
-            <SheetTitle className="break-words text-lg">{schedule?.name ?? fallbackName}</SheetTitle>
-            {schedule && (
-              <Badge variant="secondary">
-                {schedule.enabled ? t("scheduledTasks.enabled") : t("scheduledTasks.disabled")}
-              </Badge>
-            )}
-          </div>
-          <SheetDescription className="break-words">
-            {schedule?.description || t("scheduledTasks.noDescription")}
-          </SheetDescription>
-        </SheetHeader>
-        <div className="flex-1 space-y-6 overflow-y-auto p-4">
-          {loading ? (
-            <div className="space-y-3">
-              <Skeleton className="h-40 w-full" />
-              <Skeleton className="h-20 w-full" />
+    <>
+      <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
+        <SheetContent className="w-full gap-0 sm:max-w-2xl">
+          <SheetHeader className="border-b pr-12">
+            <div className="flex flex-wrap items-center gap-2">
+              <SheetTitle className="break-words text-lg">{schedule?.name ?? fallbackName}</SheetTitle>
+              {schedule && (
+                <Badge variant="secondary">
+                  {schedule.enabled ? t("scheduledTasks.enabled") : t("scheduledTasks.disabled")}
+                </Badge>
+              )}
             </div>
-          ) : error ? (
-            <RequestError
-              error={error}
-              onRetry={() => {
-                if (error.status === 404) {
-                  onClose();
-                  onListRefresh();
-                } else {
-                  setRevision((value) => value + 1);
-                }
-              }}
-            />
-          ) : schedule ? (
-            <ScheduleDetails schedule={schedule} mode={mode} />
-          ) : null}
-          <RunHistory scheduleId={scheduleId} refreshRevision={refreshRevision} />
-          <p className="text-xs text-muted-foreground">{t("scheduledTasks.readOnlyNote")}</p>
-        </div>
-      </SheetContent>
-    </Sheet>
+            <SheetDescription className="break-words">
+              {schedule?.description || t("scheduledTasks.noDescription")}
+            </SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 space-y-6 overflow-y-auto p-4">
+            {loading && !schedule ? (
+              <div className="space-y-3">
+                <Skeleton className="h-40 w-full" />
+                <Skeleton className="h-20 w-full" />
+              </div>
+            ) : error && !schedule ? (
+              <RequestError
+                error={error}
+                onRetry={() => {
+                  if (error.status === 404) {
+                    onClose();
+                    onListRefresh();
+                  } else {
+                    setRevision((value) => value + 1);
+                  }
+                }}
+              />
+            ) : schedule ? (
+              <>
+                <section className="space-y-3">
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" size="sm" disabled={pending} onClick={() => setEditing(true)}>
+                      <Pencil />
+                      {t("scheduledTasks.actions.edit")}
+                    </Button>
+                    <Button variant="outline" size="sm" disabled={pending} onClick={() => void changeState()}>
+                      {pendingAction === "state" ? <Loader2 className="animate-spin" /> : schedule.enabled ? <Pause /> : <Play />}
+                      {pendingAction === "state"
+                        ? t("scheduledTasks.actions.changingState")
+                        : t(schedule.enabled ? "scheduledTasks.actions.disable" : "scheduledTasks.actions.enable")}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={pending || !schedule.enabled}
+                      onClick={() => { setTriggerError(null); setTriggerOpen(true); }}
+                    >
+                      {pendingAction === "trigger" ? <Loader2 className="animate-spin" /> : <Play />}
+                      {pendingAction === "trigger" ? t("scheduledTasks.actions.running") : t("scheduledTasks.actions.runNow")}
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      disabled={pending}
+                      onClick={() => { setDeleteError(null); setDeleteOpen(true); }}
+                    >
+                      <Trash2 />
+                      {t("scheduledTasks.actions.delete")}
+                    </Button>
+                  </div>
+                  {!schedule.enabled && <p className="text-xs text-muted-foreground">{t("scheduledTasks.actions.disabledTriggerHint")}</p>}
+                  {schedule.user_id === null && mode === "admin" && (
+                    <Alert>
+                      <AlertTitle>{t("scheduledTasks.form.systemSchedule")}</AlertTitle>
+                      <AlertDescription>{t("scheduledTasks.form.systemScheduleDescription")}</AlertDescription>
+                    </Alert>
+                  )}
+                  {notice && (
+                    <Alert variant={notice.destructive ? "destructive" : "default"}>
+                      <AlertTitle>{notice.message}</AlertTitle>
+                      {notice.detail && <AlertDescription className="break-words">{notice.detail}</AlertDescription>}
+                    </Alert>
+                  )}
+                  {actionError && <MutationError error={actionError} />}
+                  {error && <MutationError error={error} />}
+                </section>
+                <ScheduleDetails schedule={schedule} mode={mode} />
+              </>
+            ) : null}
+            <RunHistory key={runResetRevision} scheduleId={scheduleId} refreshRevision={runRevision} />
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      {editing && schedule && (
+        <ScheduleFormDialog
+          mode={mode}
+          schedule={schedule}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setEditing(false);
+            setSchedule(updated);
+            setActionError(null);
+            setNotice({ message: t("scheduledTasks.notices.updated", { name: updated.name }), destructive: false });
+            onScheduleSaved(updated);
+          }}
+        />
+      )}
+
+      {triggerOpen && (
+        <Dialog open onOpenChange={(open) => { if (!open && pendingAction !== "trigger") setTriggerOpen(false); }}>
+          <DialogContent
+            showCloseButton={pendingAction !== "trigger"}
+            onEscapeKeyDown={(event) => { if (pendingAction === "trigger") event.preventDefault(); }}
+            onPointerDownOutside={(event) => { if (pendingAction === "trigger") event.preventDefault(); }}
+          >
+            <DialogHeader>
+              <DialogTitle>{t("scheduledTasks.trigger.title")}</DialogTitle>
+              <DialogDescription>{t("scheduledTasks.trigger.description", { name: schedule?.name ?? fallbackName })}</DialogDescription>
+            </DialogHeader>
+            <p className="text-xs text-muted-foreground">{t("scheduledTasks.trigger.waitDescription")}</p>
+            {triggerError && <MutationError error={triggerError} />}
+            <DialogFooter>
+              <Button variant="outline" disabled={pendingAction === "trigger"} onClick={() => setTriggerOpen(false)}>
+                {t("scheduledTasks.form.cancel")}
+              </Button>
+              <Button disabled={pendingAction === "trigger"} onClick={() => void runNow()}>
+                {pendingAction === "trigger" && <Loader2 className="animate-spin" />}
+                {pendingAction === "trigger" ? t("scheduledTasks.actions.running") : t("scheduledTasks.trigger.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {deleteOpen && (
+        <Dialog open onOpenChange={(open) => { if (!open && pendingAction !== "delete") setDeleteOpen(false); }}>
+          <DialogContent
+            showCloseButton={pendingAction !== "delete"}
+            onEscapeKeyDown={(event) => { if (pendingAction === "delete") event.preventDefault(); }}
+            onPointerDownOutside={(event) => { if (pendingAction === "delete") event.preventDefault(); }}
+          >
+            <DialogHeader>
+              <DialogTitle>{t("scheduledTasks.delete.title")}</DialogTitle>
+              <DialogDescription>{t("scheduledTasks.delete.description", { name: schedule?.name ?? fallbackName })}</DialogDescription>
+            </DialogHeader>
+            {deleteError && <MutationError error={deleteError} />}
+            <DialogFooter>
+              <Button variant="outline" disabled={pendingAction === "delete"} onClick={() => setDeleteOpen(false)}>
+                {t("scheduledTasks.form.cancel")}
+              </Button>
+              <Button variant="destructive" disabled={pendingAction === "delete"} onClick={() => void remove()}>
+                {pendingAction === "delete" && <Loader2 className="animate-spin" />}
+                {pendingAction === "delete" ? t("scheduledTasks.delete.deleting") : t("scheduledTasks.delete.confirm")}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
+    </>
   );
 }
 
@@ -544,7 +808,22 @@ export default function ScheduledTasksPage({ mode }: { mode: "user" | "admin" })
   const [error, setError] = useState<RequestFailure | null>(null);
   const [revision, setRevision] = useState(0);
   const [selected, setSelected] = useState<{ id: string; name: string } | null>(null);
-  const [detailRefreshRevision, setDetailRefreshRevision] = useState(0);
+  const [creating, setCreating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [scheduleRevision, setScheduleRevision] = useState(0);
+  const [runRevision, setRunRevision] = useState(0);
+  const [runResetRevision, setRunResetRevision] = useState(0);
+  const [pendingActions, setPendingActions] = useState<Record<string, MutationAction>>({});
+  const pendingActionsRef = useRef<Record<string, MutationAction>>({});
+  const mutationControllers = useRef(new Map<string, AbortController>());
+
+  useEffect(() => {
+    const controllers = mutationControllers.current;
+    return () => {
+      for (const controller of controllers.values()) controller.abort();
+      controllers.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -580,7 +859,93 @@ export default function ScheduledTasksPage({ mode }: { mode: "user" | "admin" })
 
   function refresh() {
     setRevision((value) => value + 1);
-    if (selected) setDetailRefreshRevision((value) => value + 1);
+    if (selected) {
+      setScheduleRevision((value) => value + 1);
+      setRunRevision((value) => value + 1);
+    }
+  }
+
+  async function performMutation<T>(
+    scheduleId: string,
+    action: MutationAction,
+    request: (signal: AbortSignal) => Promise<T>,
+    onSuccess: (result: T) => void,
+  ): Promise<T> {
+    if (pendingActionsRef.current[scheduleId]) {
+      throw new Error(t("scheduledTasks.mutationErrors.overlap"));
+    }
+    const controller = new AbortController();
+    pendingActionsRef.current[scheduleId] = action;
+    mutationControllers.current.set(scheduleId, controller);
+    setPendingActions((current) => ({ ...current, [scheduleId]: action }));
+    try {
+      const result = await request(controller.signal);
+      if (!controller.signal.aborted) {
+        setNotice(null);
+        onSuccess(result);
+      }
+      return result;
+    } finally {
+      if (mutationControllers.current.get(scheduleId) === controller) {
+        mutationControllers.current.delete(scheduleId);
+        delete pendingActionsRef.current[scheduleId];
+        setPendingActions((current) => {
+          const next = { ...current };
+          delete next[scheduleId];
+          return next;
+        });
+      }
+    }
+  }
+
+  function saveSchedule(updated: Schedule) {
+    setNotice(null);
+    setSchedulePage((current) => current
+      ? { ...current, data: current.data.map((row) => row.id === updated.id ? updated : row) }
+      : current);
+    setScheduleRevision((value) => value + 1);
+  }
+
+  async function changeState(schedule: Schedule): Promise<ScheduleState> {
+    return performMutation(
+      schedule.id,
+      "state",
+      (signal) => schedule.enabled ? disableSchedule(schedule.id, signal) : enableSchedule(schedule.id, signal),
+      (state) => {
+        setSchedulePage((current) => current
+          ? { ...current, data: current.data.map((row) => row.id === state.id ? { ...row, ...state } : row) }
+          : current);
+        setScheduleRevision((value) => value + 1);
+        setRevision((value) => value + 1);
+      },
+    );
+  }
+
+  async function runNow(schedule: Schedule): Promise<ScheduleRun> {
+    return performMutation(
+      schedule.id,
+      "trigger",
+      (signal) => triggerSchedule(schedule.id, signal),
+      () => {
+        setRevision((value) => value + 1);
+        setScheduleRevision((value) => value + 1);
+        setRunRevision((value) => value + 1);
+        setRunResetRevision((value) => value + 1);
+      },
+    );
+  }
+
+  async function remove(schedule: Schedule): Promise<void> {
+    return performMutation(
+      schedule.id,
+      "delete",
+      (signal) => deleteSchedule(schedule.id, signal),
+      () => {
+        setSelected((current) => current?.id === schedule.id ? null : current);
+        if (schedulePage?.data.length === 1 && page > 1) setPage(page - 1);
+        else setRevision((value) => value + 1);
+      },
+    );
   }
 
   return (
@@ -593,14 +958,23 @@ export default function ScheduledTasksPage({ mode }: { mode: "user" | "admin" })
               {t(mode === "admin" ? "scheduledTasks.adminDescription" : "scheduledTasks.userDescription")}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">{t("scheduledTasks.readOnly")}</Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button size="sm" onClick={() => { setNotice(null); setCreating(true); }}>
+              <Plus />
+              {t("scheduledTasks.actions.new")}
+            </Button>
             <Button variant="outline" size="sm" disabled={loading} onClick={refresh}>
               <RefreshCw className={loading ? "animate-spin" : undefined} />
               {t("scheduledTasks.refresh")}
             </Button>
           </div>
         </header>
+
+        {notice && (
+          <Alert>
+            <AlertTitle>{notice}</AlertTitle>
+          </Alert>
+        )}
 
         <Card className="gap-0 py-0">
           <CardHeader className="flex-row items-center justify-between gap-4 border-b py-4">
@@ -706,15 +1080,34 @@ export default function ScheduledTasksPage({ mode }: { mode: "user" | "admin" })
           />
         </Card>
       </div>
+      {creating && (
+        <ScheduleFormDialog
+          mode={mode}
+          onClose={() => setCreating(false)}
+          onSaved={(created) => {
+            setCreating(false);
+            setNotice(t("scheduledTasks.notices.created", { name: created.name }));
+            setSelected({ id: created.id, name: created.name });
+            setRevision((value) => value + 1);
+          }}
+        />
+      )}
       {selected && (
         <ScheduleDetailSheet
           key={selected.id}
           scheduleId={selected.id}
           fallbackName={selected.name}
           mode={mode}
-          refreshRevision={detailRefreshRevision}
+          scheduleRevision={scheduleRevision}
+          runRevision={runRevision}
+          runResetRevision={runResetRevision}
+          pendingAction={pendingActions[selected.id] ?? null}
           onClose={() => setSelected(null)}
           onListRefresh={() => setRevision((value) => value + 1)}
+          onScheduleSaved={saveSchedule}
+          onStateChange={changeState}
+          onTrigger={runNow}
+          onDelete={remove}
         />
       )}
     </main>

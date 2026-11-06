@@ -55,9 +55,11 @@ Later phases add Tailscale/overlay access from the owner's other devices, then a
 
 ### 3.2 Current Milestone
 
-- **v0.4.1 — Scheduled Tasks (Read-only)**: Runtime-backed schedule list, configuration details, and execution history for both roles. Ordinary users see only their own personal tasks; administrators also see public system tasks and other users' personal tasks. Implementation follows [`docs/plan/v0.4.1-scheduled-tasks.md`](docs/plan/v0.4.1-scheduled-tasks.md).
+- **v0.4.2 — Scheduled Task Management**: full Agno-native schedule create, read, update, delete, enable/disable, and manual-trigger workflows for both roles. Create/edit selects a Workflow from the scope-filtered `GET /workflows` catalog and submits its derived `POST /workflows/{workflow_id}/runs` target; Runtime enforces target run permission, and administrators can manage every visible schedule. Implementation follows [`docs/plan/v0.4.2-scheduled-task-management.md`](docs/plan/v0.4.2-scheduled-task-management.md).
 
 ### 3.2.1 Completed Milestones
+
+- **v0.4.1 — Scheduled Tasks (Read-only)**: Runtime-backed schedule list, configuration details, and execution history for both roles. Ordinary users see only their own personal tasks; administrators also see public system tasks and other users' personal tasks. Completed per [`docs/plan/v0.4.1-scheduled-tasks.md`](docs/plan/v0.4.1-scheduled-tasks.md).
 
 - **v0.4.0 — Conversation History**: Runtime-backed session list in the sidebar; users can switch between historical conversations, start new chats, and rename or delete sessions. New conversations appear in the sidebar only after their first message is persisted. Completed per [`docs/plan/v0.4.0-conversation-history.md`](docs/plan/v0.4.0-conversation-history.md).
 

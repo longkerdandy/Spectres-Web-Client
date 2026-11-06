@@ -5,7 +5,7 @@
 > Runtime project (`../Spectres-Runtime/docs/architecture.md` and
 > `docs/adr/`); this document covers only the frontend.
 >
-> Last updated: 2026-11-03 · Covers: v0.4.1 (Scheduled Tasks)
+> Last updated: 2026-11-06 · Covers: v0.4.2 (Scheduled Task Management)
 
 ---
 
@@ -172,23 +172,30 @@ The thinnest layer — everything above is library code:
 - **Session API** (`src/sessions-api.ts`): typed wrappers over Agno AgentOS's
   built-in `/sessions` endpoints (list, rename, delete), built on the shared
   `runtimeRequest` helper. AG-UI `thread_id` maps 1:1 to Runtime `session_id`.
-- **Scheduled Tasks API** (`src/scheduled-tasks-api.ts`): strict Agno
-  `ScheduleResponse` / `ScheduleRunResponse` mirrors and four GET-only wrappers
-  over `/schedules`, schedule detail, run history, and run detail. List calls
-  use Agno's `{data, meta}` envelope; no ownership override or write method
-  exists.
+- **Scheduled Tasks API** (`src/scheduled-tasks-api.ts`): strict Workflow-summary,
+  Agno schedule, create/update, state, run, and pagination mirrors with wrappers
+  for native `/workflows` discovery and `/schedules` CRUD, enable/disable, manual
+  trigger, and run history. Schedule list calls use Agno's `{data, meta}`
+  envelope; no request carries an ownership override.
 - **View state**: no router; the ordinary active view (`ViewId`) is local React
   state in `app.tsx`, and the admin view is local state in `AdminPage`. The
   chat page stays mounted (hidden) while any ordinary non-chat view is shown,
   so the conversation survives view switches.
 - **ScheduledTasksPage** (`src/pages/scheduled-tasks-page.tsx`): one shared
-  read-only page in `user | admin` mode. It provides enabled filtering,
+  management page in `user | admin` mode. It provides enabled filtering,
   schedule/run pagination, manual refresh, a schedule-detail Sheet, and
-  expandable execution records. Runtime responses determine visibility; admin
-  mode alone adds owner columns and cross-user data. Unix-second timestamps,
-  nullable fields, raw cron/timezone values, errors, and optional JSON payloads
-  are presentation-formatted. Every request supports cancellation and stale
-  completions are ignored.
+  expandable execution records. A shared form handles create/edit with native
+  validation defaults and JSON-object payloads. Its target selector is populated
+  from `GET /workflows` and derives `POST /workflows/{workflow_id}/runs` for the
+  selected Workflow. Both roles receive the native scope-filtered catalog;
+  Runtime enforces run permission separately, and administrators manage all
+  visible schedules.
+  Detail actions cover edit, enable/disable, confirmed trigger, and confirmed
+  delete. Trigger responses are rendered as run results rather than assumed
+  successes, mutation state survives Sheet dismissal, and delete repairs
+  last-row pagination. Code-managed system schedules carry a reconciliation
+  warning. Runtime remains the ownership and target-authorization boundary;
+  no request assigns `user_id`, and no UI promises sync/recompute ordering.
 - **ChatPage**: composes the prebuilt chat component, enables the generic
   tool renderer, mounts the extension-contributed tool-card registrars (§3),
   and maps the SDK's chat labels from `common` namespace keys.
@@ -402,7 +409,7 @@ branches anywhere in the code.
    a later page load with the same `thread_id` continues the conversation
    with server-side history.
 
-## 8. Source Layout (v0.4.1)
+## 8. Source Layout (v0.4.2)
 
 ```text
 src/
@@ -413,7 +420,7 @@ src/
 ├── auth.ts                # Logto config, safe JWT claims decoding, token getter / re-auth plumbing
 ├── admin-api.ts           # typed /info and UserDirectory REST contracts
 ├── sessions-api.ts        # typed /sessions list, rename, and delete contracts
-├── scheduled-tasks-api.ts # typed GET-only schedule, detail, and run-history contracts
+├── scheduled-tasks-api.ts # typed native schedule CRUD/state/trigger and run-history contracts
 ├── thread.ts              # thread_id localStorage helpers
 ├── i18n/
 │   ├── index.ts           # i18next init: language resolution, resource assembly
@@ -457,7 +464,8 @@ src/
 ├── pages/
 │   ├── admin-page.tsx     # admin view state + system overview + directory enable/disable
 │   ├── chat-page.tsx      # chat view: chat + tool renderers + label mapping
-│   └── scheduled-tasks-page.tsx # shared read-only schedules, details, and run history
+│   ├── schedule-form-dialog.tsx # shared create/edit form, validation, and native error mapping
+│   └── scheduled-tasks-page.tsx # shared schedule management, details, and run history
 └── index.css              # Tailwind entry + shadcn Neutral tokens (:root/.dark)
 ```
 
@@ -478,6 +486,11 @@ a runtime dependency boundary.
 - **Stale schedule/run id**: detail views explain that the item is missing or
   inaccessible (404) and offer an explicit refresh; Runtime owner scoping is
   not bypassed or distinguished from nonexistence.
+- **Schedule mutations**: form errors retain entered values and map native 422
+  details to fields when possible. Conflict, permission, missing-target, and
+  scheduler-unavailable responses stay in the active dialog or Sheet. Writes
+  are never retried automatically; aborting UI work is not represented as
+  cancelling a server-side mutation or execution.
 - **Stale thread id** (session deleted server-side or by another client):
   starting a new conversation or picking another session from the sidebar is
   the documented recovery; no automatic retry logic.
@@ -508,7 +521,8 @@ a runtime dependency boundary.
 ## 12. References
 
 - [`AGENTS.md`](../AGENTS.md) — project conventions, tech stack, decisions
-- [`docs/plan/v0.4.1-scheduled-tasks.md`](plan/v0.4.1-scheduled-tasks.md) — current milestone plan
+- [`docs/plan/v0.4.2-scheduled-task-management.md`](plan/v0.4.2-scheduled-task-management.md) — current milestone plan
+- [`docs/plan/v0.4.1-scheduled-tasks.md`](plan/v0.4.1-scheduled-tasks.md) — read-only scheduled tasks plan
 - [`docs/plan/v0.4.0-conversation-history.md`](plan/v0.4.0-conversation-history.md) — conversation history plan
 - [`docs/plan/v0.3.1-admin-console.md`](plan/v0.3.1-admin-console.md) — admin console milestone plan
 - [`docs/plan/v0.3.0-user-login.md`](plan/v0.3.0-user-login.md) — User Login milestone plan

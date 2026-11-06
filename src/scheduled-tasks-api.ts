@@ -23,6 +23,37 @@ export interface Schedule {
   updated_at: number | null;
 }
 
+export type ScheduleMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+
+export interface WorkflowSummary {
+  id?: string;
+  name?: string;
+  description?: string;
+}
+
+export interface ScheduleCreateInput {
+  name: string;
+  cron_expr: string;
+  endpoint: string;
+  method?: ScheduleMethod;
+  description?: string | null;
+  payload?: Record<string, unknown> | null;
+  timezone?: string;
+  timeout_seconds?: number;
+  max_retries?: number;
+  retry_delay_seconds?: number;
+}
+
+export type ScheduleUpdateInput = Partial<ScheduleCreateInput>;
+
+export interface ScheduleState {
+  id: string;
+  name: string;
+  enabled: boolean;
+  next_run_at: number | null;
+  updated_at: number | null;
+}
+
 export interface ScheduleRun {
   id: string;
   schedule_id: string;
@@ -53,6 +84,10 @@ export interface SchedulePage<T> {
   meta: PaginationMeta;
 }
 
+export function getWorkflows(signal?: AbortSignal): Promise<WorkflowSummary[]> {
+  return runtimeRequest<WorkflowSummary[]>("/workflows", { signal });
+}
+
 export function getSchedules({
   enabled,
   page = 1,
@@ -71,6 +106,54 @@ export function getSchedules({
 
 export function getSchedule(scheduleId: string, signal?: AbortSignal): Promise<Schedule> {
   return runtimeRequest<Schedule>(`/schedules/${encodeURIComponent(scheduleId)}`, { signal });
+}
+
+export function createSchedule(input: ScheduleCreateInput, signal?: AbortSignal): Promise<Schedule> {
+  return runtimeRequest<Schedule>("/schedules", {
+    method: "POST",
+    body: JSON.stringify(input),
+    signal,
+  });
+}
+
+export function updateSchedule(
+  scheduleId: string,
+  input: ScheduleUpdateInput,
+  signal?: AbortSignal,
+): Promise<Schedule> {
+  return runtimeRequest<Schedule>(`/schedules/${encodeURIComponent(scheduleId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(input),
+    signal,
+  });
+}
+
+export function deleteSchedule(scheduleId: string, signal?: AbortSignal): Promise<void> {
+  return runtimeRequest<void>(`/schedules/${encodeURIComponent(scheduleId)}`, {
+    method: "DELETE",
+    signal,
+  });
+}
+
+export function enableSchedule(scheduleId: string, signal?: AbortSignal): Promise<ScheduleState> {
+  return runtimeRequest<ScheduleState>(`/schedules/${encodeURIComponent(scheduleId)}/enable`, {
+    method: "POST",
+    signal,
+  });
+}
+
+export function disableSchedule(scheduleId: string, signal?: AbortSignal): Promise<ScheduleState> {
+  return runtimeRequest<ScheduleState>(`/schedules/${encodeURIComponent(scheduleId)}/disable`, {
+    method: "POST",
+    signal,
+  });
+}
+
+export function triggerSchedule(scheduleId: string, signal?: AbortSignal): Promise<ScheduleRun> {
+  return runtimeRequest<ScheduleRun>(`/schedules/${encodeURIComponent(scheduleId)}/trigger`, {
+    method: "POST",
+    signal,
+  });
 }
 
 export function getScheduleRuns(
